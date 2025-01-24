@@ -1,15 +1,25 @@
 ﻿{
   "openapi": "3.1.0",
   "info": {
-    "title": "Title",
-    "description": "Title",
+    "title": "OneIoT Server API",
+    "description": "Open API Specs for OneIoT Server",
     "version": "1.0.0"
   },
   "servers": [
     {
-      "url": "https"
+      "description": "Server API",
+      "url": "https://localhost:3000/api/v1/"
     }
   ],
+  "externalDocs": {
+    "description": "Github OneIoT Server",
+    "url": "https://github.com/oneiot-id/oneiot-server"
+  },
   "paths": {
+    "/user/": {
+      "get": {
+
+      }
+    }
   }
 }
