@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"oneiot-server/controller"
 	"oneiot-server/email"
+	"oneiot-server/service"
 )
 
 func main() {
@@ -19,10 +20,12 @@ func main() {
 	//Initialize router
 	router := httprouter.New()
 
-	//Initialize email handler
+	//Services
+	whatsappHandler := service.NewWhatsAppService()
 	emailHandler := &email.Email{}
 
-	//Create constructor of email controller
+	//Controller
+	whatsappController := controller.NewWhatsappController(router, whatsappHandler)
 	emailController := controller.NewEmailController(router, emailHandler)
 
 	server := http.Server{
@@ -31,7 +34,8 @@ func main() {
 	}
 
 	emailController.Serve()
-	
+	whatsappController.Serve()
+
 	err = server.ListenAndServe()
 
 	if err != nil {

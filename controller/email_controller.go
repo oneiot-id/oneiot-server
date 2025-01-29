@@ -8,6 +8,7 @@ import (
 	"oneiot-server/email"
 	"oneiot-server/request"
 	"oneiot-server/response"
+	"time"
 )
 
 type EmailController struct {
@@ -68,9 +69,17 @@ func (e *EmailController) handleVerificationCodeRequest(w http.ResponseWriter, r
 	//Send the email
 	res, err := e.emailHandler.SendVerificationEmail(requestBody.User)
 
+	cookie := &http.Cookie{
+		Name:    "EmailVerificationCode",
+		Value:   res.Payload.UniqueCode,
+		Expires: time.Now().Add(5 * time.Minute),
+	}
+
+	http.SetCookie(w, cookie)
 	resJson, _ := json.Marshal(res)
 
 	w.WriteHeader(http.StatusOK)
+
 	_, err = fmt.Fprintf(w, "%s", resJson)
 
 	if err != nil {

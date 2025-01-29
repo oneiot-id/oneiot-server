@@ -1,6 +1,7 @@
 ﻿package email
 
 import (
+	"errors"
 	"fmt"
 	gomail "gopkg.in/mail.v2"
 	"math/rand"
@@ -36,6 +37,15 @@ func (e *Email) SendVerificationEmail(to entity.User) (response.EmailVerificatio
 	//Create new Status
 	uniqueCode := GenerateRandomVerificationCode(4)
 	message := gomail.NewMessage()
+
+	/*
+		This double check if the user full name or email is empty
+	*/
+	if to.FullName == "" {
+		return response.EmailVerificationResponse{}, errors.New("User fullname cannot be emtpy")
+	} else if to.Email == "" {
+		return response.EmailVerificationResponse{}, errors.New("User email cannot be emtpy")
+	}
 
 	message.SetHeader("From", os.Getenv("SMTP_USER"))
 	message.SetHeader("To", to.Email)
