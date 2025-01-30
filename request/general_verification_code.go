@@ -3,8 +3,8 @@ package request
 import "oneiot-server/model/entity"
 
 type GeneralVerificationResponse struct {
-	Message string                         `json:"message"`
-	Payload GeneralVerificationCodePayload `json:"payload"`
+	Message string                         `json:"message" :"message"`
+	Payload GeneralVerificationCodePayload `json:"payload" :"payload"`
 }
 
 type GeneralVerificationCodePayload struct {
