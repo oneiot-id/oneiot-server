@@ -1,4 +1,4 @@
-package main
+﻿package main
 
 import (
 	"fmt"
@@ -15,7 +15,7 @@ func main() {
 	err := godotenv.Load()
 
 	if err != nil {
-		fmt.Println("Error loading .env file aaa")
+		fmt.Println("Error loading .env file")
 		panic(err)
 		return
 	}
@@ -32,7 +32,7 @@ func main() {
 	emailController := controller.NewEmailController(router, emailHandler)
 
 	server := http.Server{
-		Addr:    "0.0.0.0:8000",
+		Addr:    ":8000",
 		Handler: router,
 	}
 

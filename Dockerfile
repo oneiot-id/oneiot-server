@@ -8,6 +8,8 @@ RUN go mod download && go mod verify
 
 COPY . .
 RUN go build -v -o ./app
+RUN go build -v -o /usr/local/bin/app
+
 
 EXPOSE 8000
 
