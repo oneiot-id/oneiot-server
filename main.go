@@ -39,6 +39,8 @@ func main() {
 	emailController.Serve()
 	whatsappController.Serve()
 
+	fmt.Println("Server running at " + server.Addr)
+
 	err = server.ListenAndServe()
 
 	if err != nil {
