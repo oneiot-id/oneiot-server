@@ -1,9 +1,9 @@
-﻿# Use root/example as user/password credentials
-version: '3.1'
+﻿version: '3.1'
 
 services:
-  my-sql:
-    image: mysql
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: example
+  oneiot-server:
+    container_name: oneiot-server  # Prevent duplicate containers
+    image: oneiot-server  # Use your built app image, not `golang`
+    ports:
+      - "8000:8000"
+    restart: unless-stopped  # Auto-restart if it crashes
