@@ -32,6 +32,8 @@ func (wc *WhatsappController) getVerificationCode(w http.ResponseWriter, r *http
 
 	err := json.NewDecoder(r.Body).Decode(&requestBody)
 
+	fmt.Println("[WHATSAPP] : Requesting for verification code. ")
+
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 

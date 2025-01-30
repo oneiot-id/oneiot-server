@@ -1,6 +1,7 @@
-﻿package main
+package main
 
 import (
+	"fmt"
 	"github.com/joho/godotenv"
 	"github.com/julienschmidt/httprouter"
 	"net/http"
@@ -31,7 +32,7 @@ func main() {
 	emailController := controller.NewEmailController(router, emailHandler)
 
 	server := http.Server{
-		Addr:    ":8000",
+		Addr:    "0.0.0.0:8000",
 		Handler: router,
 	}
 

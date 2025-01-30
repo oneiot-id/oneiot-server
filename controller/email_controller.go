@@ -29,8 +29,8 @@ func (e *EmailController) handleVerificationCodeRequest(w http.ResponseWriter, r
 	var requestBody request.EmailVerificationRequestBody
 	var responseBody response.EmailVerificationResponse
 
-	//Decode the request body
 	err := json.NewDecoder(r.Body).Decode(&requestBody)
+	//Decode the request body
 
 	if requestBody.User.FullName == "" {
 		responseBody.Messsage = "User full name cannot be empty"
