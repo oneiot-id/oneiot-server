@@ -8,6 +8,7 @@ import (
 	"oneiot-server/email"
 	"oneiot-server/request"
 	"oneiot-server/response"
+	"time"
 )
 
 type EmailController struct {
@@ -31,9 +32,8 @@ func (e *EmailController) handleVerificationCodeRequest(w http.ResponseWriter, r
 	//Decode the request body
 	err := json.NewDecoder(r.Body).Decode(&requestBody)
 
-	//This handle when client not providing the email
-	if requestBody.User.Email == "" {
-		responseBody.Messsage = "User email is empty"
+	if requestBody.User.FullName == "" {
+		responseBody.Messsage = "User full name cannot be empty"
 
 		jsonResponse, _ := json.Marshal(responseBody)
 
@@ -43,6 +43,23 @@ func (e *EmailController) handleVerificationCodeRequest(w http.ResponseWriter, r
 		if err != nil {
 			return
 		}
+		return
+	}
+
+	//This handle when client not providing the email
+	if requestBody.User.Email == "" {
+		responseBody.Messsage = "User email cannot be empty"
+
+		jsonResponse, _ := json.Marshal(responseBody)
+
+		w.WriteHeader(http.StatusBadRequest)
+		_, err := fmt.Fprintf(w, "%s", string(jsonResponse))
+
+		if err != nil {
+			return
+		}
+
+		return
 	}
 
 	if err != nil {
@@ -52,9 +69,17 @@ func (e *EmailController) handleVerificationCodeRequest(w http.ResponseWriter, r
 	//Send the email
 	res, err := e.emailHandler.SendVerificationEmail(requestBody.User)
 
+	cookie := &http.Cookie{
+		Name:    "EmailVerificationCode",
+		Value:   res.Payload.UniqueCode,
+		Expires: time.Now().Add(5 * time.Minute),
+	}
+
+	http.SetCookie(w, cookie)
 	resJson, _ := json.Marshal(res)
 
 	w.WriteHeader(http.StatusOK)
+
 	_, err = fmt.Fprintf(w, "%s", resJson)
 
 	if err != nil {
