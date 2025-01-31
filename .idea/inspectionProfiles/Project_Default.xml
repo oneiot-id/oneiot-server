@@ -7,7 +7,9 @@
       </functions>
       <methods>
         <method importPath="oneiot-server/email" receiver="*Email" name="SendVerificationEmail" />
+        <method importPath="database/sql" receiver="*DB" name="QueryContext" />
       </methods>
     </inspection_tool>
+    <inspection_tool class="SqlNoDataSourceInspection" enabled="false" level="WARNING" enabled_by_default="false" />
   </profile>
 </component>

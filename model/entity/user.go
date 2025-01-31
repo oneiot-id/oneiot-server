@@ -1,5 +1,10 @@
 ﻿package entity
 
+type IUser interface {
+	// This purpose is just every derived to implement
+	IImplementUser()
+}
+
 type User struct {
 	Id          int    `json:"id"`
 	FullName    string `json:"full_name"`
@@ -8,5 +13,8 @@ type User struct {
 	PhoneNumber string `json:"phone_number"`
 	Picture     string `json:"picture"`
 	Address     string `json:"address"`
-	PinPoint    string `json:"pin_point"`
+	Location    string `json:"location"`
+}
+
+func (u User) IImplementUser() {
 }

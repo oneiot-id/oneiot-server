@@ -6,7 +6,9 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"net/http"
 	"oneiot-server/controller"
+	"oneiot-server/database"
 	"oneiot-server/email"
+	"oneiot-server/repository"
 	"oneiot-server/service"
 )
 
@@ -20,24 +22,33 @@ func main() {
 		return
 	}
 
-	//Initialize router
+	//Initializer
 	router := httprouter.New()
+	sqlDb := database.NewSqlConnection()
+
+	//Repository
+	userRepository := repository.NewUserRepository(sqlDb)
 
 	//Services
 	whatsappHandler := service.NewWhatsAppService()
 	emailHandler := &email.Email{}
+	userService := service.NewUserService(userRepository, sqlDb)
 
 	//Controller
 	whatsappController := controller.NewWhatsappController(router, whatsappHandler)
 	emailController := controller.NewEmailController(router, emailHandler)
+	_ = controller.NewUserController(router, userService, sqlDb)
 
+	//ToDo: we have to implement the middleware for API Key checking
 	server := http.Server{
 		Addr:    ":8000",
 		Handler: router,
 	}
 
+	//ToDo: we need to implement safer than this, using go wire or something
 	emailController.Serve()
 	whatsappController.Serve()
+	//userController.Serve()
 
 	fmt.Println("Server running at " + server.Addr)
 
