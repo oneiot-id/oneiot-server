@@ -52,11 +52,11 @@ func (u *UserRepository) GetUser(ctx context.Context, email string) (entity.User
 	defer queryContext.Close()
 
 	if err != nil {
-		return entity.User{}, errors.New("error while getting user")
+		return entity.User{}, errors.New("Error saat mendapatkan user")
 	}
 
 	if !queryContext.Next() {
-		return entity.User{}, errors.New("error not found user with this email")
+		return entity.User{}, errors.New("Tidak terdapat pengguna yang menggunakan email ini")
 	}
 
 	var user entity.User
@@ -66,7 +66,7 @@ func (u *UserRepository) GetUser(ctx context.Context, email string) (entity.User
 	)
 
 	if err != nil {
-		return entity.User{}, errors.New("error scanning the user")
+		return entity.User{}, errors.New("Error saat scanning pengguna")
 	}
 
 	return user, nil

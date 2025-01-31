@@ -103,7 +103,7 @@ func (u *UserService) RegisterNewUser(ctx context.Context, user entity.User) (en
 		return newUser, nil
 	}
 
-	return entity.User{}, errors.New("user email already exists")
+	return entity.User{}, errors.New("Terdapat pengguna dengan email yang sama")
 }
 
 // NewUserService creating new user service

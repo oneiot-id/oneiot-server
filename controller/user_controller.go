@@ -32,6 +32,8 @@ func NewUserController(router *httprouter.Router, userService *service.UserServi
 func (c *UserController) Serve() {
 	//Registering the user
 	c.router.POST("/api/register", c.registerHandler)
+	c.router.GET("/api/login", c.Login)
+	c.router.GET("/api/user/", c.GetUser)
 }
 
 // todo: We do the validation on the frontend only, next we will try to validate on the backend
@@ -69,5 +71,79 @@ func (c *UserController) registerHandler(w http.ResponseWriter, r *http.Request,
 	_, _ = fmt.Fprint(w, helper.MarshalThis(response.SimpleResponse{
 		Message: "Successfully registered user",
 		Data:    registeredUser,
+	}))
+}
+
+func (c *UserController) Login(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var userToLoginRequest request.UserLoginRequest
+
+	err := json.NewDecoder(r.Body).Decode(&userToLoginRequest)
+
+	//If the decode is error
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+
+		out := helper.MarshalThis(response.SimpleResponse{
+			Message: err.Error(),
+			Data:    nil,
+		})
+
+		_, _ = fmt.Fprint(w, out)
+	}
+
+	loginUser, err := c.service.LoginUser(r.Context(), userToLoginRequest.User)
+
+	//If something went wrong
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		_, err2 := fmt.Fprintf(w, helper.MarshalThis(response.SimpleResponse{
+			Message: err.Error(),
+			Data:    nil,
+		}))
+		if err2 != nil {
+			return
+		}
+	}
+
+	_, _ = fmt.Fprintf(w, helper.MarshalThis(response.SimpleResponse{
+		Message: "Successfully logged in",
+		Data:    loginUser,
+	}))
+}
+
+func (c *UserController) GetUser(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var userToLoginRequest request.UserLoginRequest
+
+	err := json.NewDecoder(r.Body).Decode(&userToLoginRequest)
+
+	//If the decode is error
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+
+		out := helper.MarshalThis(response.SimpleResponse{
+			Message: err.Error(),
+			Data:    nil,
+		})
+
+		_, _ = fmt.Fprint(w, out)
+	}
+
+	getUser, err := c.service.GetUser(r.Context(), userToLoginRequest.User)
+
+	//If something went wrong
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		_, err2 := fmt.Fprintf(w, helper.MarshalThis(response.SimpleResponse{
+			Message: err.Error(),
+			Data:    nil,
+		}))
+		if err2 != nil {
+			return
+		}
+	}
+
+	_, _ = fmt.Fprintf(w, helper.MarshalThis(response.SimpleResponse{
+		Message: "Successfully get user",
+		Data:    getUser,
 	}))
 }
