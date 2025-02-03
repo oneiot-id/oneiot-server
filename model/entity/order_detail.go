@@ -3,11 +3,11 @@ package entity
 import "time"
 
 type OrderDetail struct {
-	Id               int64  `json:"id"`
+	Id               int    `json:"id"`
 	OrderName        string `json:"order_name"`
 	ServicesId       int64
 	Deadline         time.Time
-	Speed            OrderSpeed
+	Speed            string
 	BriefFile        string
 	ImportantPoint   string
 	AdditionalNotes  string
