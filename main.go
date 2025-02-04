@@ -28,15 +28,20 @@ func main() {
 
 	//Repository
 	userRepository := repository.NewUserRepository(sqlDb)
+	orderRepository := repository.NewOrderRepository(sqlDb)
+	buyerRepository := repository.NewBuyerRepository(sqlDb)
+	orderDetailRepository := repository.NewOrderDetailRepository(sqlDb)
 
 	//Services
 	whatsappHandler := service.NewWhatsAppService()
 	emailHandler := &email.Email{}
 	userService := service.NewUserService(userRepository, sqlDb)
+	orderService := service.NewOrderService(userService, buyerRepository, orderDetailRepository, orderRepository)
 
 	//Controller
 	whatsappController := controller.NewWhatsappController(router, whatsappHandler)
 	emailController := controller.NewEmailController(router, emailHandler)
+	orderController := controller.NewOrderController(router, userService, orderService)
 	_ = controller.NewUserController(router, userService, sqlDb)
 
 	//ToDo: we have to implement the middleware for API Key checking
@@ -48,6 +53,7 @@ func main() {
 	//ToDo: we need to implement safer than this, using go wire or something
 	emailController.Serve()
 	whatsappController.Serve()
+	orderController.Serve()
 	//userController.Serve()
 
 	fmt.Println("Server running at " + server.Addr)

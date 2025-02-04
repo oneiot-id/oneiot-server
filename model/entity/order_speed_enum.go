@@ -4,10 +4,10 @@ type OrderSpeed int
 
 const (
 	Regular   OrderSpeed = iota
-	Express              = iota
-	FullSpeed            = iota
+	Express   OrderSpeed = iota
+	FullSpeed OrderSpeed = iota
 )
 
 func (s OrderSpeed) String() string {
-	return [...]string{"Regular", "Express", "FullSpeed"}[s]
+	return [...]string{"Regular", "Express", "Full Speed"}[s]
 }

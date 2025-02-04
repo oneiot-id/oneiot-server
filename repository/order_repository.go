@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"oneiot-server/model/entity"
+	"time"
 )
 
 type IOrderRepository interface {
@@ -19,14 +20,14 @@ type IOrderRepository interface {
 }
 
 type OrderRepository struct {
-	db sql.DB
+	db *sql.DB
 }
 
 func (repository *OrderRepository) CreateOrder(ctx context.Context, order entity.Order) (entity.Order, error) {
 	query := "INSERT INTO Orders(UserId, BuyerId, OrderDetailId, IsActive, CreatedAt)" +
 		"VALUES(?, ?, ?, ?, ?)"
 
-	execContext, err := repository.db.ExecContext(ctx, query, order.UserId, order.BuyerId, order.OrderDetailId, order.IsActive, order.CreatedAt)
+	execContext, err := repository.db.ExecContext(ctx, query, order.UserId, order.BuyerId, order.OrderDetailId, order.IsActive, order.CreatedAt.Format("2006-01-02 15:04:05"))
 
 	if err != nil {
 		return entity.Order{}, errors.New("Error saat membuat order")
@@ -64,20 +65,23 @@ func (repository *OrderRepository) GetOrderById(ctx context.Context, orderId int
 	}
 
 	var order entity.Order
+	var createdAt string
 
-	err = row.Scan(&order.Id, &order.UserId, &order.BuyerId, &order.OrderDetailId, &order.IsActive, &order.CreatedAt)
+	err = row.Scan(&order.Id, &order.UserId, &order.BuyerId, &order.OrderDetailId, &order.IsActive, &createdAt)
 
 	if err != nil {
 		return entity.Order{}, errors.New("Error saat scannning order dengan id " + string(rune(orderId)))
 	}
 
-	return entity.Order{}, nil
+	order.CreatedAt, err = time.Parse("2006-01-02 15:04:05", createdAt)
+
+	return order, nil
 }
 
 func (repository *OrderRepository) GetOrdersByUserId(ctx context.Context, user entity.User) ([]entity.Order, error) {
 	query := "SELECT * From Orders WHERE UserId=?"
 
-	rows, err := repository.db.QueryContext(ctx, query, user)
+	rows, err := repository.db.QueryContext(ctx, query, user.Id)
 
 	if err != nil {
 		return nil, errors.New("Error saat melakukan query ke tabel order")
@@ -111,4 +115,10 @@ func (repository *OrderRepository) SetOrderStatus(ctx context.Context, order ent
 	}
 
 	return order, nil
+}
+
+func NewOrderRepository(db *sql.DB) IOrderRepository {
+	return &OrderRepository{
+		db: db,
+	}
 }
