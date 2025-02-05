@@ -24,14 +24,14 @@ type UserRepository struct {
 	db *sql.DB
 }
 
-// UpdateUser updating the user, returning the new updated user data
+// UpdateUser updating the user_pictures, returning the new updated user_pictures data
 func (u *UserRepository) UpdateUser(ctx context.Context, user entity.User) (entity.User, error) {
 	query := "UPDATE Users SET Fullname = ?, Email = ?, Password = ?, PhoneNumber = ?, Picture = ?, Address = ?, Location = ? WHERE Email = ?"
 
 	execContext, err := u.db.ExecContext(ctx, query, user.FullName, user.Email, user.Password, user.PhoneNumber, user.Picture, user.Address, user.Location, user.Email)
 
 	if err != nil {
-		return entity.User{}, errors.New("error while updating user")
+		return entity.User{}, errors.New("error while updating user_pictures")
 	}
 
 	_, err = execContext.RowsAffected()
@@ -43,7 +43,7 @@ func (u *UserRepository) UpdateUser(ctx context.Context, user entity.User) (enti
 	return user, nil
 }
 
-// GetUser this will get the user by email
+// GetUser this will get the user_pictures by email
 func (u *UserRepository) GetUser(ctx context.Context, email string) (entity.User, error) {
 	query := "SELECT * FROM users WHERE email = ? LIMIT 1"
 
@@ -52,7 +52,7 @@ func (u *UserRepository) GetUser(ctx context.Context, email string) (entity.User
 	defer queryContext.Close()
 
 	if err != nil {
-		return entity.User{}, errors.New("Error saat mendapatkan user")
+		return entity.User{}, errors.New("Error saat mendapatkan user_pictures")
 	}
 
 	if !queryContext.Next() {
@@ -78,7 +78,7 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 	}
 }
 
-// DeleteUser deleting the user by querying the id
+// DeleteUser deleting the user_pictures by querying the id
 func (u *UserRepository) DeleteUser(ctx context.Context, user entity.User) error {
 	query := "DELETE FROM Users WHERE id=?"
 
@@ -90,14 +90,14 @@ func (u *UserRepository) DeleteUser(ctx context.Context, user entity.User) error
 	return nil
 }
 
-// CreateNewUser creating new user based on the requested data
+// CreateNewUser creating new user_pictures based on the requested data
 func (u *UserRepository) CreateNewUser(ctx context.Context, user entity.User) (entity.User, error) {
 	query := "INSERT INTO Users(Fullname, Email, Password, PhoneNumber, Picture, Address, Location) VALUES(?, ?, ?, ?, ?, ?, ?);"
 
 	execContext, err := u.db.ExecContext(ctx, query, user.FullName, user.Email, user.Password, user.PhoneNumber, user.Picture, user.Address, user.Location)
 
 	if err != nil {
-		return entity.User{}, errors.New("error while creating new user")
+		return entity.User{}, errors.New("error while creating new user_pictures")
 	}
 
 	id, err := execContext.LastInsertId()

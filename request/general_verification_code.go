@@ -10,5 +10,5 @@ type GeneralVerificationResponse struct {
 type GeneralVerificationCodePayload struct {
 	UniqueCode     string      `json:"unique_code"`
 	ExpireTimeUnix int64       `json:"expire_time_unix"`
-	User           entity.User `json:"user"`
+	User           entity.User `json:"user_pictures"`
 }

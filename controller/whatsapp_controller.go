@@ -38,14 +38,14 @@ func (wc *WhatsappController) getVerificationCode(w http.ResponseWriter, r *http
 		w.WriteHeader(http.StatusBadRequest)
 
 		resJson, _ := json.Marshal(response.EmailVerificationResponse{
-			Messsage: "Request error, check user body",
+			Messsage: "Request error, check user_pictures body",
 		})
 
 		_, _ = fmt.Fprintf(w, string(resJson))
 		return
 	}
 
-	//If the user full name or phone number is empty return bad request
+	//If the user_pictures full name or phone number is empty return bad request
 	//We don't use validate at this moment, we'll use later i think
 	if requestBody.User.FullName == "" || requestBody.User.PhoneNumber == "" {
 		w.WriteHeader(http.StatusBadRequest)
@@ -69,7 +69,7 @@ func (wc *WhatsappController) getVerificationCode(w http.ResponseWriter, r *http
 		return
 	}
 	resJson, _ := json.Marshal(request.GeneralVerificationResponse{
-		Message: "Success send user verification code",
+		Message: "Success send user_pictures verification code",
 		Payload: request.GeneralVerificationCodePayload{
 			UniqueCode:     uniqueCode,
 			ExpireTimeUnix: time.Now().Add(5 * time.Minute).Unix(),

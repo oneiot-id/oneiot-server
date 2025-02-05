@@ -8,6 +8,8 @@
       <methods>
         <method importPath="oneiot-server/email" receiver="*Email" name="SendVerificationEmail" />
         <method importPath="database/sql" receiver="*DB" name="QueryContext" />
+        <method importPath="oneiot-server/repository" receiver="IOrderRepository" name="GetOrderById" />
+        <method importPath="oneiot-server/service" receiver="IOrderService" name="GetOrderById" />
       </methods>
     </inspection_tool>
     <inspection_tool class="SqlNoDataSourceInspection" enabled="false" level="WARNING" enabled_by_default="false" />

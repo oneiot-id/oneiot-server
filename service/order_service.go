@@ -93,11 +93,11 @@ func (service *OrderService) GetAllUserOrder(ctx context.Context, user entity.Us
 
 func (service *OrderService) CreateOrder(ctx context.Context, order entity.Order, user entity.User, detail entity.OrderDetail, buyer entity.Buyer) (entity.OrderDTO, error) {
 
-	// [x] 1. First we have to get the user who creating it is it exist or not
+	// [x] 1. First we have to get the user_pictures who creating it is it exist or not
 	user, err := service.userService.GetUser(ctx, user)
 
 	if err != nil {
-		return entity.OrderDTO{}, errors.New("Tidak dapat membuat order, user tidak ditemukan")
+		return entity.OrderDTO{}, errors.New("Tidak dapat membuat order, user_pictures tidak ditemukan")
 	}
 
 	order.UserId = int64(user.Id)

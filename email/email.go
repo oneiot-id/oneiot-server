@@ -39,7 +39,7 @@ func (e *Email) SendVerificationEmail(to entity.User) (response.EmailVerificatio
 	message := gomail.NewMessage()
 
 	/*
-		This double check if the user full name or email is empty
+		This double check if the user_pictures full name or email is empty
 	*/
 	if to.FullName == "" {
 		return response.EmailVerificationResponse{}, errors.New("User fullname cannot be emtpy")

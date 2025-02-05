@@ -119,13 +119,13 @@ func (controller *OrderController) getOrderHandler(writer http.ResponseWriter, r
 	}
 
 	//ToDo:
-	// 1. we need to verify if the user is valid to get the order [x]
+	// 1. we need to verify if the user_pictures is valid to get the order [x]
 	// 2. then we can get the order [x]
-	// 3. Hmm kayaknya butuh authorisasi user, jika user berbeda dengan order user id maka batalkan
+	// 3. Hmm kayaknya butuh authorisasi user_pictures, jika user_pictures berbeda dengan order user_pictures id maka batalkan
 
 	user, err := controller.userService.GetUser(request.Context(), requestData.Data.User)
 
-	//Check if the user is logged in / valid or not
+	//Check if the user_pictures is logged in / valid or not
 	if err != nil {
 		writer.WriteHeader(http.StatusUnauthorized)
 

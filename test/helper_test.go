@@ -6,12 +6,12 @@ import (
 )
 
 func TestJsonMarshaller(t *testing.T) {
-	//user := entity.User{
+	//user_pictures := entity.User{
 	//	FullName: "vincent kenutama",
 	//	Email:    "vincent@gmail.com",
 	//}
 	//
-	//output, err := helper.MarshalThis(&user)
+	//output, err := helper.MarshalThis(&user_pictures)
 	//
 	//assert.NoError(t, err)
 	//fmt.Println(output)

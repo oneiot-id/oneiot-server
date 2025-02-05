@@ -27,7 +27,7 @@ func userServiceTestBase() *service.UserService {
 	return service.NewUserService(repository, db)
 }
 
-// This test to add new user to the database
+// This test to add new user_pictures to the database
 func TestRegisterNewUser(t *testing.T) {
 	userService := userServiceTestBase()
 

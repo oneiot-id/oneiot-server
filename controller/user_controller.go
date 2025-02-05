@@ -5,11 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/julienschmidt/httprouter"
+	"io"
 	"net/http"
 	"oneiot-server/helper"
+	"oneiot-server/model/entity"
 	"oneiot-server/request"
 	"oneiot-server/response"
 	"oneiot-server/service"
+	"os"
+	"path/filepath"
 )
 
 type UserController struct {
@@ -30,10 +34,88 @@ func NewUserController(router *httprouter.Router, userService *service.UserServi
 }
 
 func (c *UserController) Serve() {
-	//Registering the user
+	//Registering the user_pictures
 	c.router.POST("/api/register", c.registerHandler)
 	c.router.GET("/api/login", c.Login)
 	c.router.GET("/api/user/", c.GetUser)
+	c.router.POST("/api/user/upload-image", c.uploadImageHandler)
+	c.router.ServeFiles("/static/*filepath", http.Dir("static"))
+}
+
+func (c *UserController) uploadImageHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	err := r.ParseMultipartForm(4 * 1024)
+	if err != nil {
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		return
+	}
+
+	var user entity.User
+	for key, value := range r.Form {
+		switch key {
+		case "user_email":
+			user.Email = value[0]
+		case "user_password":
+			user.Password = value[0]
+		}
+	}
+
+	user, err = c.service.GetUser(r.Context(), user)
+	if err != nil {
+		http.Error(w, "Unauthorized user", http.StatusUnauthorized)
+		return
+	}
+
+	image, imageHandler, err := r.FormFile("image_data")
+	if err != nil {
+		http.Error(w, "Gambar tidak ditemukan", http.StatusBadRequest)
+		return
+	}
+	defer image.Close()
+
+	// Hapus gambar lama jika ada
+	if user.Picture != "" {
+		oldFilePath := filepath.Join("static/user_pictures", filepath.Base(user.Picture))
+		os.Remove(oldFilePath)
+	}
+
+	// Simpan gambar baru
+	dir, err := os.Getwd()
+	if err != nil {
+		return
+	}
+
+	fileName := fmt.Sprintf("%d_%s", user.Id, imageHandler.Filename)
+	fileLocation := filepath.Join(dir, "static/user_pictures", fileName)
+
+	targetFile, err := os.OpenFile(fileLocation, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		http.Error(w, "Gagal menyimpan file", http.StatusInternalServerError)
+		return
+	}
+	defer targetFile.Close()
+
+	_, err = io.Copy(targetFile, image)
+	if err != nil {
+		http.Error(w, "Gagal menyalin file", http.StatusInternalServerError)
+		return
+	}
+
+	// Simpan URL ke database
+	publicURL := fmt.Sprintf(os.Getenv("LOCALHOST")+"/static/user_pictures/%s", fileName)
+	user.Picture = publicURL
+
+	updateUser, err := c.service.UpdateUser(r.Context(), user)
+	if err != nil {
+		http.Error(w, "Gagal memperbarui pengguna", http.StatusInternalServerError)
+		return
+	}
+
+	// Kirim response ke klien
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response.APIResponse[entity.User]{
+		Message: "Sukses mengubah profile picture",
+		Data:    updateUser,
+	})
 }
 
 // todo: We do the validation on the frontend only, next we will try to validate on the backend

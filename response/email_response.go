@@ -12,5 +12,5 @@ type EmailVerificationResponse struct {
 type EmailVerificationBody struct {
 	UniqueCode     string      `json:"uniqueCode"`
 	ExpireTimeUnix int64       `json:"expireTimeUnix"`
-	User           entity.User `json:"user"`
+	User           entity.User `json:"user_pictures"`
 }

@@ -24,51 +24,51 @@ type UserService struct {
 	validator  *validator.Validate
 }
 
-// GetUser this is used to retrieve user information
+// GetUser this is used to retrieve user_pictures information
 func (u *UserService) GetUser(ctx context.Context, user entity.User) (entity.User, error) {
-	//This retrieve the user data
+	//This retrieve the user_pictures data
 	dbUser, err := u.repository.GetUser(ctx, user.Email)
 
-	//This when no user with this email
+	//This when no user_pictures with this email
 	if err != nil {
 		return entity.User{}, err
 	}
 
-	//If all seems well then login the user by returning its data
+	//If all seems well then login the user_pictures by returning its data
 	return dbUser, nil
 }
 
-// LoginUser this is used to log the user in
+// LoginUser this is used to log the user_pictures in
 func (u *UserService) LoginUser(ctx context.Context, user entity.User) (entity.User, error) {
-	//ToDo: First we need to know if the user is existed
+	//ToDo: First we need to know if the user_pictures is existed
 	dbUser, err := u.repository.GetUser(ctx, user.Email)
 
-	//This when no user with this email
+	//This when no user_pictures with this email
 	if err != nil {
 		return entity.User{}, err
 	}
 
 	//ToDo: Second we need to know if the encrypted password is same as in the database
-	//This logic is when user inputted password is not same with the database
+	//This logic is when user_pictures inputted password is not same with the database
 	if dbUser.Password != user.Password {
 		return entity.User{}, errors.New("password yang diberikan tidak sama")
 	}
 
-	//If all seems well then login the user by returning its data
+	//If all seems well then login the user_pictures by returning its data
 	return dbUser, nil
 }
 
 func (u *UserService) UpdateUser(ctx context.Context, user entity.User) (entity.User, error) {
-	//ToDo: I think we need to login first to see if the password is right before updating the user
-	//_, err := u.repository.GetUser(ctx, user.Email)
+	//ToDo: I think we need to login first to see if the password is right before updating the user_pictures
+	//_, err := u.repository.GetUser(ctx, user_pictures.Email)
 	_, err := u.LoginUser(ctx, user)
 
-	//This when no user with this email or password is incorrect
+	//This when no user_pictures with this email or password is incorrect
 	if err != nil {
 		return entity.User{}, err
 	}
 
-	//If exist update the db with the current user
+	//If exist update the db with the current user_pictures
 	updateUser, err := u.repository.UpdateUser(ctx, user)
 
 	if err != nil {
@@ -78,10 +78,10 @@ func (u *UserService) UpdateUser(ctx context.Context, user entity.User) (entity.
 	return updateUser, nil
 }
 
-// RegisterNewUser registering new user to the database, returning the current user if success
+// RegisterNewUser registering new user_pictures to the database, returning the current user_pictures if success
 func (u *UserService) RegisterNewUser(ctx context.Context, user entity.User) (entity.User, error) {
 
-	//First validate the user
+	//First validate the user_pictures
 	err := helper.ValidateUserRegister(user)
 
 	if err != nil {
@@ -91,9 +91,9 @@ func (u *UserService) RegisterNewUser(ctx context.Context, user entity.User) (en
 	//First we check if the email is already exist
 	_, err = u.repository.GetUser(ctx, user.Email)
 
-	//This is used because when user is not exist it will return error "user is not exist"
+	//This is used because when user_pictures is not exist it will return error "user_pictures is not exist"
 	if err != nil {
-		//create new user if the email is not existed
+		//create new user_pictures if the email is not existed
 		newUser, err := u.repository.CreateNewUser(ctx, user)
 
 		if err != nil {
@@ -106,7 +106,7 @@ func (u *UserService) RegisterNewUser(ctx context.Context, user entity.User) (en
 	return entity.User{}, errors.New("Terdapat pengguna dengan email yang sama")
 }
 
-// NewUserService creating new user service
+// NewUserService creating new user_pictures service
 func NewUserService(userRepository *repository.UserRepository, db *sql.DB) *UserService {
 
 	//this will use later if we use transactional method

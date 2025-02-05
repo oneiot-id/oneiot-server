@@ -11,7 +11,7 @@ import (
 type IOrderRepository interface {
 	CreateOrder(ctx context.Context, order entity.Order) (entity.Order, error)
 
-	//I don't know if the user is be able to delete the order, but we might try it later for this
+	//I don't know if the user_pictures is be able to delete the order, but we might try it later for this
 	DeleteOrderById(ctx context.Context, orderId int64) error
 
 	GetOrderById(ctx context.Context, orderId int64) (entity.Order, error)
