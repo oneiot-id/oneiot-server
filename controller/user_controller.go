@@ -43,6 +43,8 @@ func (c *UserController) Serve() {
 }
 
 func (c *UserController) uploadImageHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	w.Header().Set("Content-Type", "application/json")
+
 	err := r.ParseMultipartForm(4 * 1024)
 	if err != nil {
 		http.Error(w, "Invalid form data", http.StatusBadRequest)
@@ -60,14 +62,19 @@ func (c *UserController) uploadImageHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	user, err = c.service.GetUser(r.Context(), user)
+
 	if err != nil {
 		http.Error(w, "Unauthorized user", http.StatusUnauthorized)
 		return
 	}
 
 	image, imageHandler, err := r.FormFile("image_data")
+
 	if err != nil {
-		http.Error(w, "Gambar tidak ditemukan", http.StatusBadRequest)
+		http.Error(w, helper.MarshalThis(response.APIResponse[entity.User]{
+			Message: "Error gambar tidak ditemukan saat upload",
+			Data:    user,
+		}), http.StatusBadRequest)
 		return
 	}
 	defer image.Close()
@@ -79,10 +86,7 @@ func (c *UserController) uploadImageHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Simpan gambar baru
-	dir, err := os.Getwd()
-	if err != nil {
-		return
-	}
+	dir, _ := os.Getwd()
 
 	fileName := fmt.Sprintf("%d_%s", user.Id, imageHandler.Filename)
 	fileLocation := filepath.Join(dir, "static/user_pictures", fileName)
@@ -95,8 +99,12 @@ func (c *UserController) uploadImageHandler(w http.ResponseWriter, r *http.Reque
 	defer targetFile.Close()
 
 	_, err = io.Copy(targetFile, image)
+
 	if err != nil {
-		http.Error(w, "Gagal menyalin file", http.StatusInternalServerError)
+		http.Error(w, helper.MarshalThis(response.APIResponse[entity.User]{
+			Message: "Gagal menyimpan profile picture",
+			Data:    user,
+		}), http.StatusInternalServerError)
 		return
 	}
 
@@ -105,17 +113,21 @@ func (c *UserController) uploadImageHandler(w http.ResponseWriter, r *http.Reque
 	user.Picture = publicURL
 
 	updateUser, err := c.service.UpdateUser(r.Context(), user)
+
 	if err != nil {
-		http.Error(w, "Gagal memperbarui pengguna", http.StatusInternalServerError)
+		http.Error(w, helper.MarshalThis(response.APIResponse[entity.User]{
+			Message: err.Error(),
+			Data:    user,
+		}), http.StatusInternalServerError)
 		return
 	}
 
 	// Kirim response ke klien
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response.APIResponse[entity.User]{
+	_ = json.NewEncoder(w).Encode(response.APIResponse[entity.User]{
 		Message: "Sukses mengubah profile picture",
 		Data:    updateUser,
 	})
+
 }
 
 // todo: We do the validation on the frontend only, next we will try to validate on the backend
