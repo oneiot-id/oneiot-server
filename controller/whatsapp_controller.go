@@ -38,7 +38,7 @@ func (wc *WhatsappController) getVerificationCode(w http.ResponseWriter, r *http
 		w.WriteHeader(http.StatusBadRequest)
 
 		resJson, _ := json.Marshal(response.EmailVerificationResponse{
-			Messsage: "Request error, check user_pictures body",
+			Messsage: "Request error, check user body",
 		})
 
 		_, _ = fmt.Fprintf(w, string(resJson))
@@ -69,7 +69,7 @@ func (wc *WhatsappController) getVerificationCode(w http.ResponseWriter, r *http
 		return
 	}
 	resJson, _ := json.Marshal(request.GeneralVerificationResponse{
-		Message: "Success send user_pictures verification code",
+		Message: "Success send user verification code",
 		Payload: request.GeneralVerificationCodePayload{
 			UniqueCode:     uniqueCode,
 			ExpireTimeUnix: time.Now().Add(5 * time.Minute).Unix(),

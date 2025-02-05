@@ -97,7 +97,7 @@ func (service *OrderService) CreateOrder(ctx context.Context, order entity.Order
 	user, err := service.userService.GetUser(ctx, user)
 
 	if err != nil {
-		return entity.OrderDTO{}, errors.New("Tidak dapat membuat order, user_pictures tidak ditemukan")
+		return entity.OrderDTO{}, errors.New("Tidak dapat membuat order, user tidak ditemukan")
 	}
 
 	order.UserId = int64(user.Id)

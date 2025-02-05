@@ -47,7 +47,7 @@ func (u *UserRepository) UpdateUser(ctx context.Context, user entity.User) (enti
 	execContext, err := u.db.ExecContext(ctx, query, user.FullName, user.Email, user.Password, user.PhoneNumber, user.Picture, user.Address, user.Location, user.Email)
 
 	if err != nil {
-		return entity.User{}, errors.New("error while updating user_pictures")
+		return entity.User{}, errors.New("error while updating user")
 	}
 
 	_, err = execContext.RowsAffected()
