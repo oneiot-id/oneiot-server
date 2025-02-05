@@ -6,19 +6,22 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"net/http"
 	"oneiot-server/email"
+	"oneiot-server/model/entity"
 	"oneiot-server/request"
 	"oneiot-server/response"
+	"oneiot-server/service"
 	"time"
 )
 
 type EmailController struct {
 	router       *httprouter.Router
 	emailHandler *email.Email
+	userService  service.IUserService
 }
 
 // NewEmailController construct new email controller
-func NewEmailController(router *httprouter.Router, emailHandle *email.Email) *EmailController {
-	return &EmailController{router: router, emailHandler: emailHandle}
+func NewEmailController(router *httprouter.Router, emailHandle *email.Email, userService service.IUserService) *EmailController {
+	return &EmailController{router: router, emailHandler: emailHandle, userService: userService}
 }
 
 func (e *EmailController) Serve() {
@@ -63,6 +66,23 @@ func (e *EmailController) handleVerificationCodeRequest(w http.ResponseWriter, r
 	}
 
 	if err != nil {
+		return
+	}
+
+	//Cek dulu apakah email telah terpakai
+	user := entity.User{
+		Email:    requestBody.User.Email,
+		Password: requestBody.User.Password,
+	}
+
+	isUserExisted, err := e.userService.CheckUserExistence(r.Context(), user)
+
+	if isUserExisted {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(response.SimpleResponse{
+			Message: "Pengguna dengan email ini telah ada, gunakan email lain",
+			Data:    nil,
+		})
 		return
 	}
 

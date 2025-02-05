@@ -40,7 +40,7 @@ func main() {
 
 	//Controller
 	whatsappController := controller.NewWhatsappController(router, whatsappHandler)
-	emailController := controller.NewEmailController(router, emailHandler)
+	emailController := controller.NewEmailController(router, emailHandler, userService)
 	orderController := controller.NewOrderController(router, userService, orderService)
 	_ = controller.NewUserController(router, userService, sqlDb)
 

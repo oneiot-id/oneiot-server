@@ -15,5 +15,5 @@ type UserRegisterRequest struct {
 }
 
 type UserLoginRequest struct {
-	User entity.User `json:"user_pictures"`
+	User entity.User `json:"user"`
 }

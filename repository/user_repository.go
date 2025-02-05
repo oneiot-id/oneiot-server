@@ -17,11 +17,27 @@ type IUserRepository interface {
 	//D
 	DeleteUser(ctx context.Context, user entity.User) error
 
+	CheckUserExist(ctx context.Context, email string) (bool, error)
 	//ToDo: After this we might need the logic to add transaction or order to the database, but lemme finish this first
 }
 
 type UserRepository struct {
 	db *sql.DB
+}
+
+func (u *UserRepository) CheckUserExist(ctx context.Context, email string) (bool, error) {
+	var user entity.User
+
+	query := "SELECT Email FROM users WHERE email = ?"
+
+	err := u.db.QueryRowContext(ctx, query, email).Scan(&user.Email)
+
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		return false, errors.New("Tidak ditemukan user dengan email" + email)
+	}
+
+	return true, nil
 }
 
 // UpdateUser updating the user_pictures, returning the new updated user_pictures data
