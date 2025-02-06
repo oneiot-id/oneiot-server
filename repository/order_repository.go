@@ -67,7 +67,7 @@ func (repository *OrderRepository) GetOrderById(ctx context.Context, orderId int
 	var order entity.Order
 	var createdAt string
 
-	err = row.Scan(&order.Id, &order.UserId, &order.BuyerId, &order.OrderDetailId, &order.IsActive, &createdAt)
+	err = row.Scan(&order.Id, &order.UserId, &order.BuyerId, &order.OrderDetailId, &order.IsActive, &createdAt, &order.Confirmed)
 
 	if err != nil {
 		return entity.Order{}, errors.New("Error saat scannning order dengan id " + string(rune(orderId)))
@@ -105,10 +105,10 @@ func (repository *OrderRepository) GetOrdersByUserId(ctx context.Context, user e
 }
 
 func (repository *OrderRepository) SetOrderStatus(ctx context.Context, order entity.Order) (entity.Order, error) {
-	query := "UPDATE orders SET IsActive = ? " +
+	query := "UPDATE orders SET IsActive = ?, Confirmed = ? " +
 		"Where Id = ?"
 
-	_, err := repository.db.ExecContext(ctx, query, order.IsActive, order.Id)
+	_, err := repository.db.ExecContext(ctx, query, order.IsActive, order.Confirmed, order.Id)
 
 	if err != nil {
 		return entity.Order{}, errors.New("Error saat mengupdate status order dengan id" + string(rune(order.Id)))

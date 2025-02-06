@@ -8,6 +8,7 @@ type Order struct {
 	BuyerId       int64     `json:"buyer_id"`
 	OrderDetailId int64     `json:"order_detail_id"`
 	IsActive      bool      `json:"is_active"`
+	Confirmed     bool      `json:"confirmed"`
 	CreatedAt     time.Time `json:"created_at"`
 }
 

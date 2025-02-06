@@ -12,14 +12,24 @@ type IOrderDetailRepository interface {
 	CreateOrderDetail(ctx context.Context, orderDetail entity.OrderDetail) (entity.OrderDetail, error)
 	DeleteOrderDetail(ctx context.Context, orderDetail entity.OrderDetail) error
 	GetOrderById(ctx context.Context, orderDetail entity.OrderDetail) (entity.OrderDetail, error)
-
-	//ToDo: Sepertinya kita harus menambahkan setter untuk order ups bukan
-	//for now we cannot update the order, because the order that is posted cannot be edited
+	UpdateBriefFile(ctx context.Context, orderDetail entity.OrderDetail) (entity.OrderDetail, error)
 }
 
 type OrderDetailRepository struct {
 	db        *sql.DB
 	tableName string
+}
+
+func (repository *OrderDetailRepository) UpdateBriefFile(ctx context.Context, orderDetail entity.OrderDetail) (entity.OrderDetail, error) {
+	query := "UPDATE OrderDetails SET BriefFile=? WHERE Id=?"
+
+	_, err := repository.db.ExecContext(ctx, query, orderDetail.BriefFile, orderDetail.Id)
+
+	if err != nil {
+		return entity.OrderDetail{}, errors.New("Kesalahan dalam mengupdate order details")
+	}
+
+	return orderDetail, nil
 }
 
 func (repository *OrderDetailRepository) GetOrderById(ctx context.Context, orderDetail entity.OrderDetail) (entity.OrderDetail, error) {

@@ -12,6 +12,7 @@ type IOrderService interface {
 	GetAllUserOrder(ctx context.Context, user entity.User) ([]entity.OrderDTO, error)
 	GetOrderById(ctx context.Context, order entity.Order) (entity.OrderDTO, error)
 	SetStatus(ctx context.Context, order entity.Order) (entity.OrderDTO, error)
+	UploadBriefFile(ctx context.Context, orderDTO entity.OrderDTO, checkIdExisted bool) (entity.OrderDTO, error)
 }
 
 type OrderService struct {
@@ -19,6 +20,36 @@ type OrderService struct {
 	buyerRepository       repository.IBuyerRepository
 	orderDetailRepository repository.IOrderDetailRepository
 	orderRepository       repository.IOrderRepository
+}
+
+func (service *OrderService) UploadBriefFile(ctx context.Context, orderDTO entity.OrderDTO, checkId bool) (entity.OrderDTO, error) {
+	//Cek apakah order dengan id ini ada
+
+	var order entity.Order
+
+	//Skip jika checkId tidak digunakan
+	if checkId {
+		o, err := service.orderRepository.GetOrderById(ctx, orderDTO.Order.Id)
+
+		if err != nil {
+			return entity.OrderDTO{}, err
+		}
+
+		order = o
+	}
+
+	//Jika ada insert
+	orderDetail, err := service.orderDetailRepository.UpdateBriefFile(ctx, orderDTO.OrderDetail)
+
+	if err != nil {
+		return entity.OrderDTO{}, err
+	}
+
+	return entity.OrderDTO{
+		Order:       order,
+		Buyer:       orderDTO.Buyer,
+		OrderDetail: orderDetail,
+	}, nil
 }
 
 func (service *OrderService) SetStatus(ctx context.Context, order entity.Order) (entity.OrderDTO, error) {

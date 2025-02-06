@@ -4,12 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/julienschmidt/httprouter"
+	"io"
 	"net/http"
 	"oneiot-server/helper"
 	"oneiot-server/model/entity"
 	request2 "oneiot-server/request"
 	"oneiot-server/response"
 	"oneiot-server/service"
+	"os"
+	"path/filepath"
+	"strconv"
 	"time"
 )
 
@@ -23,6 +27,158 @@ func (controller *OrderController) Serve() {
 	controller.router.GET("/api/order", controller.getOrderHandler)
 	controller.router.GET("/api/orders", controller.getAllUserOrders)
 	controller.router.POST("/api/order", controller.createOrderHandler)
+	controller.router.PATCH("/api/order", controller.setOrderStatusHandler)
+	controller.router.POST("/api/order/upload-brief", controller.uploadWorkBriefHandler)
+
+}
+
+func (controller *OrderController) uploadWorkBriefHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var user entity.User
+	var order entity.Order
+	err := r.ParseMultipartForm(10 * 1024)
+
+	//ToDo:
+	// 0. Dapatkan semua data pada request [x]
+	// 1. Cek terlebih dahulu apakah user valid [x]
+	// 2. Dapatkan order
+	// 3. Baru kita masukkan ke DTO file nya
+	// 4. Buat order
+
+	//0.
+	//Data user
+	user.Email = r.FormValue("user_email")
+	user.Password = r.FormValue("user_password")
+
+	//Data order
+	order.Id, err = strconv.ParseInt(r.FormValue("order_id"), 10, 64)
+
+	//1.
+	//Login user
+	user, err = controller.userService.LoginUser(r.Context(), user)
+
+	//Jika tidak ada user dengan email dan password ini maka kembalikan
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(response.APIResponse[response.UpdateOrderResponse]{
+			Message: err.Error(),
+			Data:    response.UpdateOrderResponse{},
+		})
+	}
+
+	//Cek order
+	orderDTO, err := controller.orderService.GetOrderById(r.Context(), order)
+
+	//Jika tidak ada order dengan id ini
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(response.APIResponse[response.UpdateOrderResponse]{
+			Message: err.Error(),
+			Data:    response.UpdateOrderResponse{},
+		})
+	}
+
+	//Return error jika order bukan milik user
+	if user.Id != int(orderDTO.Order.UserId) {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(response.APIResponse[response.UpdateOrderResponse]{
+			Message: "User tidak memiliki akses ke order ini",
+			Data:    response.UpdateOrderResponse{},
+		})
+	}
+
+	//Logic disini untuk mengupdate brief file
+	//Buka directory sekarang
+	file, fileHandler, err := r.FormFile("brief_file")
+
+	dir, _ := os.Getwd()
+
+	//Buat file
+	fileName := fmt.Sprintf("%d_%s_%s", user.Id, time.Now().Format("2006-01-02 15-04-05"), fileHandler.Filename)
+
+	filePath := filepath.Join(dir, "static/order_briefs", fileName)
+
+	newFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0666)
+
+	_, err = io.Copy(newFile, file)
+
+	if err != nil {
+		return
+	}
+
+	defer newFile.Close()
+	defer file.Close()
+
+	//Update brief file
+	orderDTO.OrderDetail.BriefFile = fmt.Sprintf("%s/static/order_briefs/%s", os.Getenv("LOCALHOST"), fileName)
+
+	orderDTO, err = controller.orderService.UploadBriefFile(r.Context(), orderDTO, false)
+
+	json.NewEncoder(w).Encode(response.APIResponse[response.UpdateBriefFile]{
+		Message: "Sukses mengupdate brief file",
+		Data: response.UpdateBriefFile{
+			User:     user,
+			OrderDTO: orderDTO,
+		},
+	})
+}
+
+func (controller *OrderController) setOrderStatusHandler(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	var request request2.APIRequest[request2.SetOrderRequest]
+	w.Header().Set("Content-Type", "application/json")
+
+	err := json.NewDecoder(r.Body).Decode(&request)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	//Login user terlebih dahulu
+	user, err := controller.userService.GetUser(r.Context(), request.Data.User)
+
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(response.SimpleResponse{
+			Message: err.Error(),
+			Data:    nil,
+		})
+		return
+	}
+
+	//Dapatkan terlebih dahulu ordernya
+	order, err := controller.orderService.GetOrderById(r.Context(), request.Data.Order)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response.SimpleResponse{
+			Message: err.Error(),
+			Data:    nil,
+		})
+		return
+	}
+
+	//Update statusnya
+	order, err = controller.orderService.SetStatus(r.Context(), request.Data.Order)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response.SimpleResponse{
+			Message: err.Error(),
+			Data:    nil,
+		})
+		return
+	}
+
+	//Jika berhasil kirim ke client
+	json.NewEncoder(w).Encode(response.APIResponse[response.UpdateOrderResponse]{
+		Message: "Sukses mengupdate status order",
+		Data: response.UpdateOrderResponse{
+			User:  user,
+			Order: order.Order,
+		},
+	})
 }
 
 func (controller *OrderController) createOrderHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -62,6 +218,7 @@ func (controller *OrderController) createOrderHandler(w http.ResponseWriter, r *
 			Message: err.Error(),
 			Data:    nil,
 		}))
+		return
 	}
 
 	//Jika semua berhasil maka kirim
@@ -110,6 +267,8 @@ func (controller *OrderController) getAllUserOrders(w http.ResponseWriter, r *ht
 
 func (controller *OrderController) getOrderHandler(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 
+	writer.Header().Set("Content-Type", "application/json")
+		
 	var requestData request2.APIRequest[request2.GetOrderRequest]
 
 	err := json.NewDecoder(request.Body).Decode(&requestData)

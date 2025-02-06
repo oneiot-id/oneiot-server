@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/joho/godotenv"
 	"github.com/julienschmidt/httprouter"
+	"github.com/rs/cors"
 	"net/http"
 	"oneiot-server/controller"
 	"oneiot-server/database"
@@ -25,6 +26,11 @@ func main() {
 	//Initializer
 	router := httprouter.New()
 	sqlDb := database.NewSqlConnection()
+	corsHandler := cors.New(cors.Options{
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+	}).Handler(router)
+	router.ServeFiles("/static/*filepath", http.Dir("static"))
 
 	//Repository
 	userRepository := repository.NewUserRepository(sqlDb)
@@ -47,7 +53,7 @@ func main() {
 	//ToDo: we have to implement the middleware for API Key checking
 	server := http.Server{
 		Addr:    ":8000",
-		Handler: router,
+		Handler: corsHandler,
 	}
 
 	//ToDo: we need to implement safer than this, using go wire or something
@@ -56,6 +62,7 @@ func main() {
 	orderController.Serve()
 	//userController.Serve()
 
+	fmt.Println(corsHandler)
 	fmt.Println("Server running at " + server.Addr)
 
 	err = server.ListenAndServe()

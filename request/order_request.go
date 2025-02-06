@@ -18,3 +18,12 @@ type CreateOrderRequest struct {
 	OrderDetail entity.OrderDetail `json:"order_detail"`
 	Buyer       entity.Buyer       `json:"buyer"`
 }
+
+type SetOrderRequest struct {
+	User  entity.User  `json:"user"`
+	Order entity.Order `json:"order"`
+}
+
+type UploadOrderRequest struct {
+	User entity.User `json:"user"`
+}

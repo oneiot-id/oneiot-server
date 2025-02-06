@@ -36,10 +36,9 @@ func NewUserController(router *httprouter.Router, userService *service.UserServi
 func (c *UserController) Serve() {
 	//Registering the user_pictures
 	c.router.POST("/api/register", c.registerHandler)
-	c.router.GET("/api/login", c.Login)
-	c.router.GET("/api/user/", c.GetUser)
+	c.router.POST("/api/login", c.Login)
+	c.router.GET("/api/user", c.GetUser)
 	c.router.POST("/api/user/upload-image", c.uploadImageHandler)
-	c.router.ServeFiles("/static/*filepath", http.Dir("static"))
 }
 
 func (c *UserController) uploadImageHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -170,7 +169,7 @@ func (c *UserController) registerHandler(w http.ResponseWriter, r *http.Request,
 
 func (c *UserController) Login(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var userToLoginRequest request.UserLoginRequest
-
+	w.Header().Set("content-type", "application/json")
 	err := json.NewDecoder(r.Body).Decode(&userToLoginRequest)
 
 	//If the decode is error
@@ -197,6 +196,7 @@ func (c *UserController) Login(w http.ResponseWriter, r *http.Request, _ httprou
 		if err2 != nil {
 			return
 		}
+		return
 	}
 
 	_, _ = fmt.Fprintf(w, helper.MarshalThis(response.SimpleResponse{
@@ -222,7 +222,19 @@ func (c *UserController) GetUser(w http.ResponseWriter, r *http.Request, _ httpr
 		_, _ = fmt.Fprint(w, out)
 	}
 
-	getUser, err := c.service.GetUser(r.Context(), userToLoginRequest.User)
+	//pertama pastikan user valid dari login
+	user, err := c.service.LoginUser(r.Context(), userToLoginRequest.User)
+
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(helper.MarshalThis(response.SimpleResponse{
+			Message: "Periksa user email atau password",
+			Data:    nil,
+		}))
+		return
+	}
+
+	getUser, err := c.service.GetUser(r.Context(), user)
 
 	//If something went wrong
 	if err != nil {
