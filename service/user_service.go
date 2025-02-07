@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/go-playground/validator/v10"
+	"golang.org/x/crypto/bcrypt"
 	"oneiot-server/helper"
 	"oneiot-server/model/entity"
 	"oneiot-server/repository"
@@ -61,7 +62,9 @@ func (u *UserService) LoginUser(ctx context.Context, user entity.User) (entity.U
 
 	//ToDo: Second we need to know if the encrypted password is same as in the database
 	//This logic is when user inputted password is not same with the database
-	if dbUser.Password != user.Password {
+	passwordIsSame := bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(user.Password))
+
+	if passwordIsSame != nil {
 		return entity.User{}, errors.New("password yang diberikan tidak sama")
 	}
 
@@ -105,6 +108,15 @@ func (u *UserService) RegisterNewUser(ctx context.Context, user entity.User) (en
 	//This is used because when user is not exist it will return error "user is not exist"
 	if err != nil {
 		//create new user if the email is not existed
+
+		//Hash the password with bcrypt
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+		user.Password = string(hashedPassword)
+
+		if err != nil {
+			return entity.User{}, err
+		}
+
 		newUser, err := u.repository.CreateNewUser(ctx, user)
 
 		if err != nil {
