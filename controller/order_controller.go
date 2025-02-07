@@ -65,6 +65,7 @@ func (controller *OrderController) uploadWorkBriefHandler(w http.ResponseWriter,
 			Message: err.Error(),
 			Data:    response.UpdateOrderResponse{},
 		})
+		return
 	}
 
 	//Cek order
@@ -77,6 +78,7 @@ func (controller *OrderController) uploadWorkBriefHandler(w http.ResponseWriter,
 			Message: err.Error(),
 			Data:    response.UpdateOrderResponse{},
 		})
+		return
 	}
 
 	//Return error jika order bukan milik user
@@ -86,6 +88,7 @@ func (controller *OrderController) uploadWorkBriefHandler(w http.ResponseWriter,
 			Message: "User tidak memiliki akses ke order ini",
 			Data:    response.UpdateOrderResponse{},
 		})
+		return
 	}
 
 	//Logic disini untuk mengupdate brief file
