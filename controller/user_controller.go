@@ -37,7 +37,7 @@ func (c *UserController) Serve() {
 	//Registering the user_pictures
 	c.router.POST("/api/register", c.registerHandler)
 	c.router.POST("/api/login", c.Login)
-	c.router.GET("/api/user", c.GetUser)
+	c.router.POST("/api/user", c.GetUser)
 	c.router.POST("/api/user/upload-image", c.uploadImageHandler)
 }
 
