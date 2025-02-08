@@ -79,7 +79,7 @@ func (repository *OrderRepository) GetOrderById(ctx context.Context, orderId int
 }
 
 func (repository *OrderRepository) GetOrdersByUserId(ctx context.Context, user entity.User) ([]entity.Order, error) {
-	query := "SELECT * From Orders WHERE UserId=?"
+	query := "SELECT Id, UserId, BuyerId, OrderDetailId, IsActive, CreatedAt, Confirmed From Orders WHERE UserId = ? "
 
 	rows, err := repository.db.QueryContext(ctx, query, user.Id)
 
@@ -87,18 +87,18 @@ func (repository *OrderRepository) GetOrdersByUserId(ctx context.Context, user e
 		return nil, errors.New("Error saat melakukan query ke tabel order")
 	}
 
-	if !rows.Next() {
-		return nil, errors.New("User belum memiliki item order")
-	}
-
 	var orders []entity.Order
 
 	for rows.Next() {
 		var order entity.Order
 
-		err = rows.Scan(&order.Id, &order.UserId, &order.BuyerId, &order.OrderDetailId, &order.IsActive, &order.CreatedAt)
+		err = rows.Scan(&order.Id, &order.UserId, &order.BuyerId, &order.OrderDetailId, &order.IsActive, &order.CreatedAt, &order.Confirmed)
 
 		orders = append(orders, order)
+	}
+
+	if len(orders) == 0 {
+		return nil, errors.New("User belum memesan sesuatu")
 	}
 
 	return orders, nil

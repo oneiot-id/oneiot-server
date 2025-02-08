@@ -60,7 +60,7 @@ func (c *UserController) uploadImageHandler(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	user, err = c.service.GetUser(r.Context(), user)
+	_, err = c.service.GetUser(r.Context(), user)
 
 	if err != nil {
 		http.Error(w, "Unauthorized user", http.StatusUnauthorized)
@@ -223,7 +223,7 @@ func (c *UserController) GetUser(w http.ResponseWriter, r *http.Request, _ httpr
 	}
 
 	//pertama pastikan user valid dari login
-	user, err := c.service.LoginUser(r.Context(), userToLoginRequest.User)
+	_, err = c.service.LoginUser(r.Context(), userToLoginRequest.User)
 
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -234,7 +234,7 @@ func (c *UserController) GetUser(w http.ResponseWriter, r *http.Request, _ httpr
 		return
 	}
 
-	getUser, err := c.service.GetUser(r.Context(), user)
+	getUser, err := c.service.GetUser(r.Context(), userToLoginRequest.User)
 
 	//If something went wrong
 	if err != nil {

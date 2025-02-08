@@ -82,18 +82,21 @@ func (u *UserService) UpdateUser(ctx context.Context, user entity.User) (entity.
 	//ToDo: I think we need to login first to see if the password is right before updating the user
 	//_, err := u.repository.GetUser(ctx, user.Email)
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	user.Password = string(hashedPassword)
-
-	_, err = u.LoginUser(ctx, user)
+	dbUser, err := u.repository.GetUser(ctx, user.Email)
 
 	//This when no user with this email or password is incorrect
 	if err != nil {
 		return entity.User{}, err
 	}
 
+	passwordError := bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(user.Password))
+
+	if passwordError != nil {
+		return entity.User{}, err
+	}
+
 	//If exist update the db with the current user
-	updateUser, err := u.repository.UpdateUser(ctx, user)
+	updateUser, err := u.repository.UpdateUser(ctx, dbUser)
 
 	if err != nil {
 		return entity.User{}, err

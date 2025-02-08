@@ -194,7 +194,7 @@ func (controller *OrderController) createOrderHandler(w http.ResponseWriter, r *
 		return
 	}
 
-	user, err := controller.userService.GetUser(r.Context(), request.Data.User)
+	_, err = controller.userService.GetUser(r.Context(), request.Data.User)
 
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -212,7 +212,7 @@ func (controller *OrderController) createOrderHandler(w http.ResponseWriter, r *
 		CreatedAt: time.Now(),
 	}
 
-	createdOrder, err := controller.orderService.CreateOrder(r.Context(), order, user, request.Data.OrderDetail, request.Data.Buyer)
+	createdOrder, err := controller.orderService.CreateOrder(r.Context(), order, request.Data.User, request.Data.OrderDetail, request.Data.Buyer)
 
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -271,7 +271,7 @@ func (controller *OrderController) getAllUserOrders(w http.ResponseWriter, r *ht
 func (controller *OrderController) getOrderHandler(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 
 	writer.Header().Set("Content-Type", "application/json")
-		
+
 	var requestData request2.APIRequest[request2.GetOrderRequest]
 
 	err := json.NewDecoder(request.Body).Decode(&requestData)
