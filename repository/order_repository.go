@@ -52,7 +52,7 @@ func (repository *OrderRepository) DeleteOrderById(ctx context.Context, orderId 
 }
 
 func (repository *OrderRepository) GetOrderById(ctx context.Context, orderId int64) (entity.Order, error) {
-	query := "SELECT * From Orders WHERE Id=?"
+	query := "SELECT Id, UserId, BuyerId, OrderDetailId, IsActive, CreatedAt, Confirmed From Orders WHERE Id=?"
 
 	row, err := repository.db.QueryContext(ctx, query, orderId)
 

@@ -90,13 +90,14 @@ func (u *UserService) UpdateUser(ctx context.Context, user entity.User) (entity.
 	}
 
 	passwordError := bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(user.Password))
+	user.Password = dbUser.Password
 
 	if passwordError != nil {
 		return entity.User{}, err
 	}
 
 	//If exist update the db with the current user
-	updateUser, err := u.repository.UpdateUser(ctx, dbUser)
+	updateUser, err := u.repository.UpdateUser(ctx, user)
 
 	if err != nil {
 		return entity.User{}, err

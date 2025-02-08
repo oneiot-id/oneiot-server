@@ -50,17 +50,22 @@ func (c *UserController) uploadImageHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	var password string
+
 	var user entity.User
 	for key, value := range r.Form {
 		switch key {
 		case "user_email":
 			user.Email = value[0]
 		case "user_password":
+
 			user.Password = value[0]
+			password = value[0]
 		}
 	}
 
-	_, err = c.service.GetUser(r.Context(), user)
+	user, err = c.service.GetUser(r.Context(), user)
+	user.Password = password
 
 	if err != nil {
 		http.Error(w, "Unauthorized user", http.StatusUnauthorized)
