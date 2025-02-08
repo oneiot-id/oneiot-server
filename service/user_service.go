@@ -81,6 +81,10 @@ func (u *UserService) LoginUser(ctx context.Context, user entity.User) (entity.U
 func (u *UserService) UpdateUser(ctx context.Context, user entity.User) (entity.User, error) {
 	//ToDo: I think we need to login first to see if the password is right before updating the user
 	//_, err := u.repository.GetUser(ctx, user.Email)
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	user.Password = string(hashedPassword)
+
 	_, err := u.LoginUser(ctx, user)
 
 	//This when no user with this email or password is incorrect
