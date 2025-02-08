@@ -116,7 +116,7 @@ func (controller *OrderController) uploadWorkBriefHandler(w http.ResponseWriter,
 	//Update brief file
 	orderDTO.OrderDetail.BriefFile = fmt.Sprintf("%s/static/order_briefs/%s", os.Getenv("LOCALHOST"), fileName)
 
-	orderDTO, err = controller.orderService.UploadBriefFile(r.Context(), orderDTO, false)
+	orderDTO, err = controller.orderService.UploadBriefFile(r.Context(), orderDTO, true)
 
 	json.NewEncoder(w).Encode(response.APIResponse[response.UpdateBriefFile]{
 		Message: "Sukses mengupdate brief file",
