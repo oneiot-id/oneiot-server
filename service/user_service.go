@@ -85,7 +85,7 @@ func (u *UserService) UpdateUser(ctx context.Context, user entity.User) (entity.
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	user.Password = string(hashedPassword)
 
-	_, err := u.LoginUser(ctx, user)
+	_, err = u.LoginUser(ctx, user)
 
 	//This when no user with this email or password is incorrect
 	if err != nil {
