@@ -46,6 +46,12 @@ func (u *UserService) GetUser(ctx context.Context, user entity.User) (entity.Use
 		return entity.User{}, err
 	}
 
+	passwordIsSame := bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(user.Password))
+
+	if passwordIsSame != nil {
+		return entity.User{}, errors.New("password yang diberikan tidak sama")
+	}
+
 	//If all seems well then login the user by returning its data
 	return dbUser, nil
 }
