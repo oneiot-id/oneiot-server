@@ -11,6 +11,8 @@
         <method importPath="oneiot-server/repository" receiver="IOrderRepository" name="GetOrderById" />
         <method importPath="oneiot-server/service" receiver="IOrderService" name="GetOrderById" />
         <method importPath="net/http" receiver="*Request" name="FormFile" />
+        <method importPath="oneiot-server/repository" receiver="ITransactionRepository" name="GetById" />
+        <method importPath="oneiot-server/service" receiver="ITransactionService" name="GetTransaction" />
       </methods>
     </inspection_tool>
     <inspection_tool class="SqlNoDataSourceInspection" enabled="false" level="WARNING" enabled_by_default="false" />

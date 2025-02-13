@@ -38,17 +38,25 @@ func main() {
 	buyerRepository := repository.NewBuyerRepository(sqlDb)
 	orderDetailRepository := repository.NewOrderDetailRepository(sqlDb)
 
+	transactionRepository := repository.NewTransactionRepository(sqlDb)
+	productionStatusRepository := repository.NewProductionStatusRepository(sqlDb)
+	deliveryStatusRepository := repository.NewDeliveryStatusRepository(sqlDb)
+	pricingRepository := repository.NewPricingRepository(sqlDb, 0.11)
+	paymentRepository := repository.NewPaymentRepository(sqlDb)
+
 	//Services
 	whatsappHandler := service.NewWhatsAppService()
 	emailHandler := &email.Email{}
 	userService := service.NewUserService(userRepository, sqlDb)
 	orderService := service.NewOrderService(userService, buyerRepository, orderDetailRepository, orderRepository)
+	transactionService := service.NewTransactionService(sqlDb, transactionRepository, paymentRepository, pricingRepository, productionStatusRepository, deliveryStatusRepository)
 
 	//Controller
 	whatsappController := controller.NewWhatsappController(router, whatsappHandler)
 	emailController := controller.NewEmailController(router, emailHandler, userService)
 	orderController := controller.NewOrderController(router, userService, orderService)
 	_ = controller.NewUserController(router, userService, sqlDb)
+	transactionController := controller.NewTransactionController(router, userService, transactionService, orderService)
 
 	//ToDo: we have to implement the middleware for API Key checking
 	server := http.Server{
@@ -60,7 +68,7 @@ func main() {
 	emailController.Serve()
 	whatsappController.Serve()
 	orderController.Serve()
-	//userController.Serve()
+	transactionController.Serve()
 
 	fmt.Println(corsHandler)
 	fmt.Println("Server running at " + server.Addr)

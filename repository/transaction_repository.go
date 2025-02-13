@@ -10,21 +10,21 @@ import (
 )
 
 type ITransactionRepository interface {
-	Create(ctx context.Context, transaction entity.Transaction) (entity.Transaction, error)
-	GetById(ctx context.Context, transactionId int64) (entity.Transaction, error)
-	GetByUserId(ctx context.Context, userId int64) ([]entity.Transaction, error)
-	Update(ctx context.Context, transaction entity.Transaction) (entity.Transaction, error)
-	Delete(ctx context.Context, transactionId int64) error
+	Create(ctx context.Context, tx *sql.Tx, transaction entity.Transaction) (entity.Transaction, error)
+	GetById(ctx context.Context, tx *sql.Tx, transactionId int64) (entity.Transaction, error)
+	GetByUserId(ctx context.Context, tx *sql.Tx, userId int64) ([]entity.Transaction, error)
+	Update(ctx context.Context, tx *sql.Tx, transaction entity.Transaction) (entity.Transaction, error)
+	Delete(ctx context.Context, tx *sql.Tx, transactionId int64) error
 }
 
 type TransactionRepository struct {
 	db *sql.DB
 }
 
-func (repo *TransactionRepository) Create(ctx context.Context, transaction entity.Transaction) (entity.Transaction, error) {
+func (repo *TransactionRepository) Create(ctx context.Context, tx *sql.Tx, transaction entity.Transaction) (entity.Transaction, error) {
 	query := "INSERT INTO Transactions(UserId, OrderId, PricingId, ProductionStatusesId, DeliveryStatusesId, Status, CreatedAt, Complained) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
 
-	execContext, err := repo.db.ExecContext(ctx, query, transaction.UserId, transaction.OrderId, transaction.PricingId, transaction.ProductionStatusesId, transaction.DeliveryStatusesId, transaction.Status, helper.ConvertToDateTimeString(transaction.CreatedAt), transaction.Complained)
+	execContext, err := tx.ExecContext(ctx, query, transaction.UserId, transaction.OrderId, transaction.PricingId, transaction.ProductionStatusesId, transaction.DeliveryStatusesId, transaction.Status, helper.ConvertToDateTimeString(transaction.CreatedAt), transaction.Complained)
 
 	if err != nil {
 		return entity.Transaction{}, errors.New("Terjadi kesalahan saat membuat transaction")
@@ -35,14 +35,14 @@ func (repo *TransactionRepository) Create(ctx context.Context, transaction entit
 	return transaction, nil
 }
 
-func (repo *TransactionRepository) GetById(ctx context.Context, transactionId int64) (entity.Transaction, error) {
+func (repo *TransactionRepository) GetById(ctx context.Context, tx *sql.Tx, transactionId int64) (entity.Transaction, error) {
 	var transaction entity.Transaction
 
 	query := "SELECT Id, UserId, OrderId, PricingId, ProductionStatusesId, DeliveryStatusesId, Status, CreatedAt, Complained FROM Transactions WHERE Id = ?"
 
 	var createdAt string
 
-	err := repo.db.QueryRowContext(ctx, query, transactionId).Scan(&transaction.Id, &transaction.UserId, &transaction.ProductionStatusesId, &transaction.OrderId, &transaction.ProductionStatusesId, &transaction.DeliveryStatusesId, &transaction.Status, &createdAt, &transaction.Complained)
+	err := tx.QueryRowContext(ctx, query, transactionId).Scan(&transaction.Id, &transaction.UserId, &transaction.OrderId, &transaction.PricingId, &transaction.ProductionStatusesId, &transaction.DeliveryStatusesId, &transaction.Status, &createdAt, &transaction.Complained)
 
 	if err != nil {
 		return entity.Transaction{}, errors.New("Terjadi kesalahan saat mendapatkan transaction dengan id " + fmt.Sprint(transactionId))
@@ -53,10 +53,10 @@ func (repo *TransactionRepository) GetById(ctx context.Context, transactionId in
 	return transaction, nil
 }
 
-func (repo *TransactionRepository) GetByUserId(ctx context.Context, userId int64) ([]entity.Transaction, error) {
+func (repo *TransactionRepository) GetByUserId(ctx context.Context, tx *sql.Tx, userId int64) ([]entity.Transaction, error) {
 	query := "SELECT Id, UserId, OrderId, PricingId, ProductionStatusesId, DeliveryStatusesId, Status, CreatedAt, Complained FROM Transactions WHERE UserId = ?"
 
-	rows, err := repo.db.QueryContext(ctx, query, userId)
+	rows, err := tx.QueryContext(ctx, query, userId)
 
 	if err != nil {
 		return nil, err
@@ -85,10 +85,10 @@ func (repo *TransactionRepository) GetByUserId(ctx context.Context, userId int64
 	return transactions, nil
 }
 
-func (repo *TransactionRepository) Update(ctx context.Context, transaction entity.Transaction) (entity.Transaction, error) {
+func (repo *TransactionRepository) Update(ctx context.Context, tx *sql.Tx, transaction entity.Transaction) (entity.Transaction, error) {
 	query := "UPDATE Transactions SET UserId=?, OrderId=?, PricingId=?, ProductionStatusesId=?, DeliveryStatusesId=?, Status=?, CreatedAt=?, Complained=? WHERE Id=?"
 
-	_, err := repo.db.ExecContext(ctx, query, transaction.UserId, transaction.OrderId, transaction.PricingId,
+	_, err := tx.ExecContext(ctx, query, transaction.UserId, transaction.OrderId, transaction.PricingId,
 		transaction.ProductionStatusesId, transaction.DeliveryStatusesId, transaction.Status,
 		helper.ConvertToDateTimeString(transaction.CreatedAt), transaction.Complained, transaction.Id)
 
@@ -99,9 +99,9 @@ func (repo *TransactionRepository) Update(ctx context.Context, transaction entit
 	return transaction, nil
 }
 
-func (repo *TransactionRepository) Delete(ctx context.Context, transactionId int64) error {
+func (repo *TransactionRepository) Delete(ctx context.Context, tx *sql.Tx, transactionId int64) error {
 	query := "DELETE FROM Transactions WHERE Id = ?"
-	_, err := repo.db.ExecContext(ctx, query, transactionId)
+	_, err := tx.ExecContext(ctx, query, transactionId)
 
 	if err != nil {
 		return errors.New("Failed to delete transaction")
@@ -110,5 +110,5 @@ func (repo *TransactionRepository) Delete(ctx context.Context, transactionId int
 }
 
 func NewTransactionRepository(db *sql.DB) *TransactionRepository {
-	return &TransactionRepository{db}
+	return &TransactionRepository{db: db}
 }
