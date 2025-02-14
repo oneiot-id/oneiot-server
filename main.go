@@ -71,7 +71,7 @@ func main() {
 	transactionController.Serve()
 
 	fmt.Println(corsHandler)
-	fmt.Println("Server running at " + server.Addr)
+	fmt.Println("[INFO] : Server running at  " + server.Addr)
 
 	err = server.ListenAndServe()
 
