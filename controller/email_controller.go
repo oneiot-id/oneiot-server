@@ -3,7 +3,6 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/julienschmidt/httprouter"
 	"net/http"
 	"oneiot-server/email"
 	"oneiot-server/model/entity"
@@ -11,6 +10,8 @@ import (
 	"oneiot-server/response"
 	"oneiot-server/service"
 	"time"
+
+	"github.com/julienschmidt/httprouter"
 )
 
 type EmailController struct {
@@ -25,7 +26,7 @@ func NewEmailController(router *httprouter.Router, emailHandle *email.Email, use
 }
 
 func (e *EmailController) Serve() {
-	e.router.GET("/api/email/verification", e.handleVerificationCodeRequest)
+	e.router.POST("/api/email/verification", e.handleVerificationCodeRequest)
 }
 
 func (e *EmailController) handleVerificationCodeRequest(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
