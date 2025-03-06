@@ -2,15 +2,16 @@
 
 import (
 	"fmt"
-	"github.com/joho/godotenv"
-	"github.com/julienschmidt/httprouter"
-	"github.com/rs/cors"
 	"net/http"
 	"oneiot-server/controller"
 	"oneiot-server/database"
 	"oneiot-server/email"
 	"oneiot-server/repository"
 	"oneiot-server/service"
+
+	"github.com/joho/godotenv"
+	"github.com/julienschmidt/httprouter"
+	"github.com/rs/cors"
 )
 
 func main() {

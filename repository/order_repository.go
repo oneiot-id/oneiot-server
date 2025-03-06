@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"oneiot-server/helper"
 	"oneiot-server/model/entity"
 	"time"
 )
@@ -91,9 +92,11 @@ func (repository *OrderRepository) GetOrdersByUserId(ctx context.Context, user e
 
 	for rows.Next() {
 		var order entity.Order
+		var createdAt string
 
-		err = rows.Scan(&order.Id, &order.UserId, &order.BuyerId, &order.OrderDetailId, &order.IsActive, &order.CreatedAt, &order.Confirmed)
+		err = rows.Scan(&order.Id, &order.UserId, &order.BuyerId, &order.OrderDetailId, &order.IsActive, &createdAt, &order.Confirmed)
 
+		order.CreatedAt = helper.StringToDateTime(createdAt)
 		orders = append(orders, order)
 	}
 

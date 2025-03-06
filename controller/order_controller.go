@@ -3,7 +3,6 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/julienschmidt/httprouter"
 	"io"
 	"net/http"
 	"oneiot-server/helper"
@@ -15,6 +14,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"time"
+
+	"github.com/julienschmidt/httprouter"
 )
 
 type OrderController struct {
@@ -237,6 +238,8 @@ func (controller *OrderController) createOrderHandler(w http.ResponseWriter, r *
 
 func (controller *OrderController) getAllUserOrders(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var requestData request2.APIRequest[request2.GetOrdersRequest]
+
+	w.Header().Set("Content-Type", "application-json")
 
 	err := json.NewDecoder(r.Body).Decode(&requestData)
 

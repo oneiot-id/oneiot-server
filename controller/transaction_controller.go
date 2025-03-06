@@ -66,6 +66,8 @@ func (controller *TransactionController) CreateTransactionOrder(w http.ResponseW
 
 func (controller *TransactionController) GetTransactionHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var request request2.APIRequest[request2.GetTransactionRequest]
+	
+	w.Header().Set("content-type", "application/json")
 
 	_ = json.NewDecoder(r.Body).Decode(&request)
 
