@@ -25,8 +25,8 @@ type OrderController struct {
 }
 
 func (controller *OrderController) Serve() {
-	controller.router.GET("/api/order", controller.getOrderHandler)
-	controller.router.GET("/api/orders", controller.getAllUserOrders)
+	controller.router.POST("/api/order-status", controller.getOrderHandler)
+	controller.router.POST("/api/orders", controller.getAllUserOrders)
 	controller.router.POST("/api/order", controller.createOrderHandler)
 	controller.router.PATCH("/api/order", controller.setOrderStatusHandler)
 	controller.router.POST("/api/order/upload-brief", controller.uploadWorkBriefHandler)
