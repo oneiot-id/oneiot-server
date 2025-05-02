@@ -2,10 +2,12 @@
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"oneiot-server/controller"
 	"oneiot-server/database"
 	"oneiot-server/email"
+	"oneiot-server/helper"
 	"oneiot-server/repository"
 	"oneiot-server/service"
 
@@ -19,17 +21,23 @@ func main() {
 	err := godotenv.Load()
 
 	if err != nil {
-		fmt.Println("Error loading .env file")
-		panic(err)
-		return
+		log.Fatalf("Error loading .env file: %v", err)
+	}
+
+	err = helper.LoadJWTConfig()
+	if err != nil {
+		log.Fatalf("Error loading JWT configuration: %v", err)
 	}
 
 	//Initializer
 	router := httprouter.New()
 	sqlDb := database.NewSqlConnection()
 	corsHandler := cors.New(cors.Options{
-		AllowedOrigins: []string{"*"},
-		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization", "X-Requested-With"},
+		AllowCredentials: true,
+		Debug:            true,
 	}).Handler(router)
 	router.ServeFiles("/static/*filepath", http.Dir("static"))
 

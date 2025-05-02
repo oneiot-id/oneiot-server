@@ -4,16 +4,18 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/julienschmidt/httprouter"
 	"io"
 	"net/http"
 	"oneiot-server/helper"
+	"oneiot-server/middleware"
 	"oneiot-server/model/entity"
 	"oneiot-server/request"
 	"oneiot-server/response"
 	"oneiot-server/service"
 	"os"
 	"path/filepath"
+
+	"github.com/julienschmidt/httprouter"
 )
 
 type UserController struct {
@@ -26,6 +28,7 @@ func NewUserController(router *httprouter.Router, userService *service.UserServi
 	userController := &UserController{
 		service: userService,
 		router:  router,
+		db:      db,
 	}
 
 	userController.Serve()
@@ -37,36 +40,23 @@ func (c *UserController) Serve() {
 	//Registering the user_pictures
 	c.router.POST("/api/register", c.registerHandler)
 	c.router.POST("/api/login", c.Login)
-	c.router.POST("/api/user", c.GetUser)
-	c.router.POST("/api/user/upload-image", c.uploadImageHandler)
+	c.router.POST("/api/logout", c.Logout)
+	c.router.POST("/api/user/upload-image", middleware.JWTMiddleware(c.uploadImageHandler))
+	c.router.POST("/api/user", middleware.JWTMiddleware(c.GetUser))
 }
 
 func (c *UserController) uploadImageHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	w.Header().Set("Content-Type", "application/json")
 
-	err := r.ParseMultipartForm(4 * 1024)
+	claims, _ := middleware.GetClaimsFromContext(r.Context())
+
+	err := r.ParseMultipartForm(4 * 1024 * 1024)
 	if err != nil {
 		http.Error(w, "Invalid form data", http.StatusBadRequest)
 		return
 	}
 
-	var password string
-
-	var user entity.User
-	for key, value := range r.Form {
-		switch key {
-		case "user_email":
-			user.Email = value[0]
-		case "user_password":
-
-			user.Password = value[0]
-			password = value[0]
-		}
-	}
-
-	user, err = c.service.GetUser(r.Context(), user)
-	user.Password = password
-
+	user, err := c.service.GetUserByID(r.Context(), claims.UserID)
 	if err != nil {
 		http.Error(w, "Unauthorized user", http.StatusUnauthorized)
 		return
@@ -126,9 +116,12 @@ func (c *UserController) uploadImageHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	updateUser.Password = ""
+
 	// Kirim response ke klien
-	_ = json.NewEncoder(w).Encode(response.APIResponse[entity.User]{
-		Message: "Sukses mengubah profile picture",
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response.APIResponse[entity.User]{
+		Message: "Sukses mengubah profil picture",
 		Data:    updateUser,
 	})
 
@@ -165,11 +158,27 @@ func (c *UserController) registerHandler(w http.ResponseWriter, r *http.Request,
 		_, _ = fmt.Fprint(w, out)
 	}
 
+	tokenString, expirationTime, err := helper.GenerateJWT(registeredUser)
+	if err != nil {
+		http.Error(w, helper.MarshalThis(response.SimpleResponse{Message: "User registered, but failed to generate session token", Data: nil}), http.StatusInternalServerError)
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     middleware.CookieName,
+		Value:    tokenString,
+		Expires:  expirationTime,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   os.Getenv("APP_ENV") == "production",
+		SameSite: http.SameSiteLaxMode,
+	})
+
 	w.WriteHeader(http.StatusCreated)
-	_, _ = fmt.Fprint(w, helper.MarshalThis(response.SimpleResponse{
+	json.NewEncoder(w).Encode(response.SimpleResponse{
 		Message: "Successfully registered user",
 		Data:    registeredUser,
-	}))
+	})
 }
 
 func (c *UserController) Login(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -193,68 +202,62 @@ func (c *UserController) Login(w http.ResponseWriter, r *http.Request, _ httprou
 
 	//If something went wrong
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		_, err2 := fmt.Fprintf(w, helper.MarshalThis(response.SimpleResponse{
-			Message: err.Error(),
-			Data:    nil,
-		}))
-		if err2 != nil {
-			return
-		}
+		http.Error(w, helper.MarshalThis(response.SimpleResponse{Message: err.Error(), Data: nil}), http.StatusUnauthorized) // Use 401 for login failure
 		return
 	}
 
-	_, _ = fmt.Fprintf(w, helper.MarshalThis(response.SimpleResponse{
+	tokenString, expirationTime, err := helper.GenerateJWT(loginUser)
+	if err != nil {
+		http.Error(w, helper.MarshalThis(response.SimpleResponse{Message: "Failed to generate token", Data: nil}), http.StatusInternalServerError)
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     middleware.CookieName,
+		Value:    tokenString,
+		Expires:  expirationTime,
+		Path:     "/", // Important for cookie scope
+		HttpOnly: true,
+		Secure:   os.Getenv("APP_ENV") == "production", // Use Secure flag in production
+		SameSite: http.SameSiteLaxMode,                 // Or StrictMode
+	})
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response.SimpleResponse{
 		Message: "Successfully logged in",
 		Data:    loginUser,
-	}))
+	})
 }
 
 func (c *UserController) GetUser(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	var userToLoginRequest request.UserLoginRequest
+	w.Header().Set("Content-Type", "application/json")
 
-	err := json.NewDecoder(r.Body).Decode(&userToLoginRequest)
+	claims, _ := middleware.GetClaimsFromContext(r.Context())
 
-	//If the decode is error
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-
-		out := helper.MarshalThis(response.SimpleResponse{
-			Message: err.Error(),
-			Data:    nil,
-		})
-
-		_, _ = fmt.Fprint(w, out)
-	}
-
-	//pertama pastikan user valid dari login
-	_, err = c.service.LoginUser(r.Context(), userToLoginRequest.User)
+	getUserData, err := c.service.GetUserByID(r.Context(), claims.UserID)
 
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(helper.MarshalThis(response.SimpleResponse{
-			Message: "Periksa user email atau password",
+		http.Error(w, helper.MarshalThis(response.SimpleResponse{
+			Message: "Failed to retrieve user data: " + err.Error(),
 			Data:    nil,
-		}))
+		}), http.StatusNotFound)
 		return
 	}
 
-	getUser, err := c.service.GetUser(r.Context(), userToLoginRequest.User)
+	getUserData.Password = ""
 
-	//If something went wrong
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		_, err2 := fmt.Fprintf(w, helper.MarshalThis(response.SimpleResponse{
-			Message: err.Error(),
-			Data:    nil,
-		}))
-		if err2 != nil {
-			return
-		}
-	}
-
-	_, _ = fmt.Fprintf(w, helper.MarshalThis(response.SimpleResponse{
+	json.NewEncoder(w).Encode(response.SimpleResponse{
 		Message: "Successfully get user",
-		Data:    getUser,
-	}))
+		Data:    getUserData,
+	})
+}
+
+func (c *UserController) Logout(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	middleware.ClearAuthCookie(w)
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response.SimpleResponse{
+		Message: "Successfully logged out",
+		Data:    nil,
+	})
 }

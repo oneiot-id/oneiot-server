@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"oneiot-server/model/entity"
 )
 
@@ -12,6 +13,7 @@ type IUserRepository interface {
 	CreateNewUser(ctx context.Context, user entity.User) (entity.User, error)
 	//R
 	GetUser(ctx context.Context, email string) (entity.User, error)
+	GetUserByID(ctx context.Context, userID int) (entity.User, error)
 	//U
 	UpdateUser(ctx context.Context, user entity.User) (entity.User, error)
 	//D
@@ -42,16 +44,17 @@ func (u *UserRepository) CheckUserExist(ctx context.Context, email string) (bool
 
 // UpdateUser updating the user_pictures, returning the new updated user_pictures data
 func (u *UserRepository) UpdateUser(ctx context.Context, user entity.User) (entity.User, error) {
-	query := "UPDATE Users SET Fullname = ?, Email = ?, Password = ?, PhoneNumber = ?, Picture = ?, Address = ?, Location = ? WHERE Email = ?"
+	query := "UPDATE Users SET Fullname = ?, Email = ?, Password = ?, PhoneNumber = ?, Picture = ?, Address = ?, Location = ? WHERE Id = ?"
 
-	execContext, err := u.db.ExecContext(ctx, query, user.FullName, user.Email, user.Password, user.PhoneNumber, user.Picture, user.Address, user.Location, user.Email)
+	execContext, err := u.db.ExecContext(ctx, query,
+		user.FullName, user.Email, user.Password, user.PhoneNumber,
+		user.Picture, user.Address, user.Location, user.Id)
 
 	if err != nil {
-		return entity.User{}, errors.New("error while updating user")
+		return entity.User{}, fmt.Errorf("error update user dengan ID %d: %w", user.Id, err)
 	}
 
 	_, err = execContext.RowsAffected()
-
 	if err != nil {
 		return entity.User{}, err
 	}
@@ -63,35 +66,41 @@ func (u *UserRepository) UpdateUser(ctx context.Context, user entity.User) (enti
 func (u *UserRepository) GetUser(ctx context.Context, email string) (entity.User, error) {
 	query := "SELECT * FROM users WHERE email = ? LIMIT 1"
 
-	queryContext, err := u.db.QueryContext(ctx, query, email)
-
-	defer queryContext.Close()
-
-	if err != nil {
-		return entity.User{}, errors.New("Error saat mendapatkan user_pictures")
-	}
-
-	if !queryContext.Next() {
-		return entity.User{}, errors.New("Tidak terdapat pengguna yang menggunakan email ini")
-	}
+	queryRowContext := u.db.QueryRowContext(ctx, query, email)
 
 	var user entity.User
-	err = queryContext.Scan(
+	err := queryRowContext.Scan(
 		&user.Id, &user.FullName, &user.Email, &user.Password,
 		&user.PhoneNumber, &user.Picture, &user.Address, &user.Location,
 	)
-
 	if err != nil {
-		return entity.User{}, errors.New("Error saat scanning pengguna")
+		if errors.Is(err, sql.ErrNoRows) {
+			return entity.User{}, fmt.Errorf("tidak terdapat pengguna dengan email: %s", email) // Specific error
+		}
+		return entity.User{}, fmt.Errorf("error scanning data user dengan email %s: %w", email, err)
 	}
 
 	return user, nil
 }
 
-func NewUserRepository(db *sql.DB) *UserRepository {
-	return &UserRepository{
-		db: db,
+func (u *UserRepository) GetUserByID(ctx context.Context, userID int) (entity.User, error) {
+	query := "SELECT * FROM users WHERE Id = ? LIMIT 1"
+	queryRowContext := u.db.QueryRowContext(ctx, query, userID)
+
+	var user entity.User
+	err := queryRowContext.Scan(
+		&user.Id, &user.FullName, &user.Email, &user.Password,
+		&user.PhoneNumber, &user.Picture, &user.Address, &user.Location,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return entity.User{}, fmt.Errorf("tidak terdapat pengguna dengan ID: %d", userID)
+		}
+		return entity.User{}, fmt.Errorf("error scanning data user dengan ID %d: %w", userID, err)
 	}
+
+	return user, nil
 }
 
 // DeleteUser deleting the user_pictures by querying the id
@@ -124,4 +133,10 @@ func (u *UserRepository) CreateNewUser(ctx context.Context, user entity.User) (e
 	user.Id = int(id)
 
 	return user, nil
+}
+
+func NewUserRepository(db *sql.DB) *UserRepository {
+	return &UserRepository{
+		db: db,
+	}
 }

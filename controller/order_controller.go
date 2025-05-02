@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"oneiot-server/helper"
+	"oneiot-server/middleware"
 	"oneiot-server/model/entity"
 	request2 "oneiot-server/request"
 	"oneiot-server/response"
@@ -25,20 +26,25 @@ type OrderController struct {
 }
 
 func (controller *OrderController) Serve() {
-	controller.router.POST("/api/order-status", controller.getOrderHandler)
-	controller.router.POST("/api/orders", controller.getAllUserOrders)
-	controller.router.POST("/api/order", controller.createOrderHandler)
-	controller.router.PATCH("/api/order", controller.setOrderStatusHandler)
-	controller.router.POST("/api/order/upload-brief", controller.uploadWorkBriefHandler)
-
+	controller.router.POST("/api/order-status", middleware.JWTMiddleware(controller.getOrderHandler))
+	controller.router.POST("/api/orders", middleware.JWTMiddleware(controller.getAllUserOrders))
+	controller.router.POST("/api/order", middleware.JWTMiddleware(controller.createOrderHandler))
+	controller.router.PATCH("/api/order", middleware.JWTMiddleware(controller.setOrderStatusHandler))
+	controller.router.POST("/api/order/upload-brief", middleware.JWTMiddleware(controller.uploadWorkBriefHandler))
 }
 
 func (controller *OrderController) uploadWorkBriefHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	w.Header().Set("Content-Type", "application/json")
 
-	var user entity.User
-	var order entity.Order
-	err := r.ParseMultipartForm(10 * 1024)
+	claims, _ := middleware.GetClaimsFromContext(r.Context())
+	userId := claims.UserID
+
+	// Parse Multipart Form (max 10MB for brief + other fields)
+	err := r.ParseMultipartForm(10 * 1024 * 1024)
+	if err != nil {
+		http.Error(w, helper.MarshalThis(response.SimpleResponse{Message: "Invalid form data: " + err.Error(), Data: nil}), http.StatusBadRequest)
+		return
+	}
 
 	//ToDo:
 	// 0. Dapatkan semua data pada request [x]
@@ -47,30 +53,17 @@ func (controller *OrderController) uploadWorkBriefHandler(w http.ResponseWriter,
 	// 3. Baru kita masukkan ke DTO file nya
 	// 4. Buat order
 
-	//0.
-	//Data user
-	user.Email = r.FormValue("user_email")
-	user.Password = r.FormValue("user_password")
-
-	//Data order
-	order.Id, err = strconv.ParseInt(r.FormValue("order_id"), 10, 64)
-
-	//1.
-	//Login user
-	user, err = controller.userService.LoginUser(r.Context(), user)
-
-	//Jika tidak ada user dengan email dan password ini maka kembalikan
+	// 3. Get Order ID from form
+	orderIDStr := r.FormValue("order_id")
+	orderID, err := strconv.ParseInt(orderIDStr, 10, 64)
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(response.APIResponse[response.UpdateOrderResponse]{
-			Message: err.Error(),
-			Data:    response.UpdateOrderResponse{},
-		})
+		http.Error(w, helper.MarshalThis(response.SimpleResponse{Message: "Invalid or missing order_id in form data", Data: nil}), http.StatusBadRequest)
 		return
 	}
+	orderToUpdate := entity.Order{Id: orderID}
 
 	//Cek order
-	orderDTO, err := controller.orderService.GetOrderById(r.Context(), order)
+	orderDTO, err := controller.orderService.GetOrderById(r.Context(), orderToUpdate)
 
 	//Jika tidak ada order dengan id ini
 	if err != nil {
@@ -83,7 +76,7 @@ func (controller *OrderController) uploadWorkBriefHandler(w http.ResponseWriter,
 	}
 
 	//Return error jika order bukan milik user
-	if user.Id != int(orderDTO.Order.UserId) {
+	if int(orderDTO.Order.UserId) != userId {
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(response.APIResponse[response.UpdateOrderResponse]{
 			Message: "User tidak memiliki akses ke order ini",
@@ -95,11 +88,18 @@ func (controller *OrderController) uploadWorkBriefHandler(w http.ResponseWriter,
 	//Logic disini untuk mengupdate brief file
 	//Buka directory sekarang
 	file, fileHandler, err := r.FormFile("brief_file")
+	if err != nil {
+		http.Error(w, helper.MarshalThis(response.APIResponse[response.UpdateBriefFile]{
+			Message: "Error: brief_file not found in form data",
+			Data:    response.UpdateBriefFile{OrderDTO: orderDTO}, // Return current DTO?
+		}), http.StatusBadRequest)
+		return
+	}
 
 	dir, _ := os.Getwd()
 
 	//Buat file
-	fileName := fmt.Sprintf("%d_%s_%s", user.Id, time.Now().Format("2006-01-02 15-04-05"), fileHandler.Filename)
+	fileName := fmt.Sprintf("%d_%s_%s", userId, time.Now().Format("2006-01-02 15-04-05"), fileHandler.Filename)
 
 	filePath := filepath.Join(dir, "static/order_briefs", fileName)
 
@@ -119,6 +119,14 @@ func (controller *OrderController) uploadWorkBriefHandler(w http.ResponseWriter,
 
 	orderDTO, err = controller.orderService.UploadBriefFile(r.Context(), orderDTO, true)
 
+	user, err := controller.userService.GetUserByID(r.Context(), userId)
+	if err != nil {
+		fmt.Printf("Warning: Could not fetch user details for response: %v\n", err)
+		user = entity.User{Id: userId}
+	}
+	user.Password = ""
+
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response.APIResponse[response.UpdateBriefFile]{
 		Message: "Sukses mengupdate brief file",
 		Data: response.UpdateBriefFile{
@@ -186,38 +194,34 @@ func (controller *OrderController) setOrderStatusHandler(w http.ResponseWriter, 
 }
 
 func (controller *OrderController) createOrderHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// 1. Get claims
+	claims, ok := middleware.GetClaimsFromContext(r.Context())
+	if !ok {
+		middleware.UnauthorizedResponse(w, "Unable to retrieve user claims")
+		return
+	}
+	userId := claims.UserID
+
 	var request request2.APIRequest[request2.CreateOrderRequest]
 
 	err := json.NewDecoder(r.Body).Decode(&request)
-
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	_, err = controller.userService.GetUser(r.Context(), request.Data.User)
-
-	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-
-		fmt.Fprintf(w, helper.MarshalThis(response.SimpleResponse{
-			Message: err.Error(),
-			Data:    nil,
-		}))
-
-		return
-	}
-
 	order := entity.Order{
+		UserId:    int64(userId),
 		IsActive:  false,
+		Confirmed: false,
 		CreatedAt: time.Now(),
 	}
 
-	createdOrder, err := controller.orderService.CreateOrder(r.Context(), order, request.Data.User, request.Data.OrderDetail, request.Data.Buyer)
-
+	createdOrder, err := controller.orderService.CreateOrder(r.Context(), order, entity.User{Id: userId}, request.Data.OrderDetail, request.Data.Buyer)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-
 		fmt.Fprintf(w, helper.MarshalThis(response.SimpleResponse{
 			Message: err.Error(),
 			Data:    nil,
@@ -225,21 +229,22 @@ func (controller *OrderController) createOrderHandler(w http.ResponseWriter, r *
 		return
 	}
 
-	//Jika semua berhasil maka kirim
-	fmt.Fprintf(w, helper.MarshalThis(response.APIResponse[response.CreateOrderResponse]{
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(response.APIResponse[response.CreateOrderResponse]{
 		Message: "Sukses membuat order",
 		Data: response.CreateOrderResponse{
 			Order: createdOrder,
 		},
-	}))
-
-	fmt.Println(createdOrder)
+	})
 }
 
 func (controller *OrderController) getAllUserOrders(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var requestData request2.APIRequest[request2.GetOrdersRequest]
 
 	w.Header().Set("Content-Type", "application-json")
+
+	claims, _ := middleware.GetClaimsFromContext(r.Context())
+	userId := claims.UserID
 
 	err := json.NewDecoder(r.Body).Decode(&requestData)
 
@@ -248,7 +253,7 @@ func (controller *OrderController) getAllUserOrders(w http.ResponseWriter, r *ht
 		return
 	}
 
-	orders, err := controller.orderService.GetAllUserOrder(r.Context(), requestData.Data.User)
+	orders, err := controller.orderService.GetAllUserOrder(r.Context(), entity.User{Id: userId})
 
 	if err != nil {
 		w.WriteHeader(http.StatusOK)
@@ -260,25 +265,31 @@ func (controller *OrderController) getAllUserOrders(w http.ResponseWriter, r *ht
 		return
 	}
 
-	fmt.Fprintf(w, helper.MarshalThis(response.APIResponse[response.GetAllOrdersResponse]{
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response.APIResponse[response.GetAllOrdersResponse]{
 		Message: "Sukses mendapatkan data",
 		Data: response.GetAllOrdersResponse{
 			Orders: orders,
 		},
-	}))
+	})
 
 	fmt.Println(requestData)
 	fmt.Println(orders)
 }
 
 func (controller *OrderController) getOrderHandler(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-
 	writer.Header().Set("Content-Type", "application/json")
 
-	var requestData request2.APIRequest[request2.GetOrderRequest]
+	claims, _ := middleware.GetClaimsFromContext(request.Context())
+	userId := claims.UserID
+
+	var requestData struct {
+		Data struct {
+			Order entity.Order `json:"order"`
+		} `json:"data"`
+	}
 
 	err := json.NewDecoder(request.Body).Decode(&requestData)
-
 	if err != nil {
 		panic(err)
 	}
@@ -288,24 +299,10 @@ func (controller *OrderController) getOrderHandler(writer http.ResponseWriter, r
 	// 2. then we can get the order [x]
 	// 3. Hmm kayaknya butuh authorisasi user_pictures, jika user_pictures berbeda dengan order user_pictures id maka batalkan
 
-	user, err := controller.userService.GetUser(request.Context(), requestData.Data.User)
-
-	//Check if the user_pictures is logged in / valid or not
-	if err != nil {
-		writer.WriteHeader(http.StatusUnauthorized)
-
-		fmt.Fprintf(writer, helper.MarshalThis(response.SimpleResponse{
-			Message: "Unauthorized, pengguna ini tidak dapat mengakses data, karena terdapat kesalahan pada data yang diberikan",
-			Data:    nil}))
-
-		return
-	}
-
 	orderDTOResponse, err := controller.orderService.GetOrderById(request.Context(), requestData.Data.Order)
 
-	if int(orderDTOResponse.Order.UserId) != user.Id {
+	if int(orderDTOResponse.Order.UserId) != userId {
 		writer.WriteHeader(http.StatusUnauthorized)
-
 		fmt.Fprintf(writer, helper.MarshalThis(response.SimpleResponse{
 			Message: "Unauthorized, pengguna ini tidak dapat mengakses data, karena order ini bukan milik pengguna ini",
 			Data:    nil}))
@@ -313,21 +310,11 @@ func (controller *OrderController) getOrderHandler(writer http.ResponseWriter, r
 		return
 	}
 
-	//Check if the order id is valid or not
-	if err != nil {
-		writer.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(writer, helper.MarshalThis(response.SimpleResponse{
-			Message: err.Error(),
-			Data:    nil}))
-		return
-	}
-
-	res := helper.MarshalThis(orderDTOResponse)
-	_, err = fmt.Fprint(writer, res)
-
-	if err != nil {
-		return
-	}
+	writer.WriteHeader(http.StatusOK)
+	json.NewEncoder(writer).Encode(response.APIResponse[entity.OrderDTO]{
+		Message: "Sukses mendapatkan order",
+		Data:    orderDTOResponse,
+	})
 }
 
 func NewOrderController(router *httprouter.Router, userService service.IUserService, orderService service.IOrderService) *OrderController {

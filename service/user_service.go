@@ -4,16 +4,20 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"github.com/go-playground/validator/v10"
-	"golang.org/x/crypto/bcrypt"
+	"fmt"
 	"oneiot-server/helper"
 	"oneiot-server/model/entity"
 	"oneiot-server/repository"
+	"strings"
+
+	"github.com/go-playground/validator/v10"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type IUserService interface {
 	RegisterNewUser(context context.Context, user entity.User) (entity.User, error)
 	GetUser(context context.Context, user entity.User) (entity.User, error)
+	GetUserByID(ctx context.Context, userID int) (entity.User, error)
 	UpdateUser(context context.Context, user entity.User) (entity.User, error)
 	LoginUser(context context.Context, user entity.User) (entity.User, error)
 	CheckUserExistence(context context.Context, user entity.User) (bool, error)
@@ -38,6 +42,10 @@ func (u *UserService) CheckUserExistence(context context.Context, user entity.Us
 
 // GetUser this is used to retrieve user information
 func (u *UserService) GetUser(ctx context.Context, user entity.User) (entity.User, error) {
+	if user.Email == "" || user.Password == "" {
+		return entity.User{}, errors.New("email and password are required")
+	}
+
 	//This retrieve the user data
 	dbUser, err := u.repository.GetUser(ctx, user.Email)
 
@@ -56,25 +64,24 @@ func (u *UserService) GetUser(ctx context.Context, user entity.User) (entity.Use
 	return dbUser, nil
 }
 
+func (u *UserService) GetUserByID(ctx context.Context, userID int) (entity.User, error) {
+	dbUser, err := u.repository.GetUserByID(ctx, userID)
+	if err != nil {
+		return entity.User{}, err
+	}
+	return dbUser, nil
+}
+
 // LoginUser this is used to log the user in
 func (u *UserService) LoginUser(ctx context.Context, user entity.User) (entity.User, error) {
 	//ToDo: First we need to know if the user is existed
-	dbUser, err := u.repository.GetUser(ctx, user.Email)
+	dbUser, err := u.GetUser(ctx, user)
 
 	//This when no user with this email
 	if err != nil {
 		return entity.User{}, err
 	}
 
-	//ToDo: Second we need to know if the encrypted password is same as in the database
-	//This logic is when user inputted password is not same with the database
-	passwordIsSame := bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(user.Password))
-
-	if passwordIsSame != nil {
-		return entity.User{}, errors.New("password yang diberikan tidak sama")
-	}
-
-	//If all seems well then login the user by returning its data
 	return dbUser, nil
 }
 
@@ -82,28 +89,41 @@ func (u *UserService) UpdateUser(ctx context.Context, user entity.User) (entity.
 	//ToDo: I think we need to login first to see if the password is right before updating the user
 	//_, err := u.repository.GetUser(ctx, user.Email)
 
-	dbUser, err := u.repository.GetUser(ctx, user.Email)
+	dbUser, err := u.repository.GetUserByID(ctx, user.Id)
 
 	//This when no user with this email or password is incorrect
 	if err != nil {
 		return entity.User{}, err
 	}
 
-	passwordError := bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(user.Password))
-	user.Password = dbUser.Password
-
-	if passwordError != nil {
-		return entity.User{}, err
+	if user.Password == "" {
+		user.Password = dbUser.Password // Keep existing password if not provided
+	}
+	// If the email is being changed, check if the *new* email is already taken by *another* user.
+	if user.Email != "" && user.Email != dbUser.Email {
+		// Email is being changed, check if the new email is already taken by *another* user.
+		conflictingUser, checkErr := u.repository.GetUser(ctx, user.Email)
+		if checkErr == nil && conflictingUser.Id != user.Id {
+			// Found another user with the target email
+			return entity.User{}, errors.New("email address is already in use by another account")
+		} else if checkErr != nil && !strings.Contains(checkErr.Error(), "no user found") {
+			// Handle potential DB error during email check, but ignore "not found" error
+			fmt.Printf("Database error checking email availability for %s: %v\n", user.Email, checkErr)
+			return entity.User{}, errors.New("internal server error checking email availability")
+		}
+		// If checkErr indicates "no user found", it's safe to proceed with the email change.
+	} else if user.Email == "" {
+		user.Email = dbUser.Email // Keep existing email if not provided
 	}
 
-	//If exist update the db with the current user
-	updateUser, err := u.repository.UpdateUser(ctx, user)
-
+	// 5. Call repository to update
+	updatedUser, err := u.repository.UpdateUser(ctx, user)
 	if err != nil {
-		return entity.User{}, err
+		fmt.Printf("Error updating user ID %d in repository: %v\n", user.Id, err)
+		return entity.User{}, errors.New("failed to update user information") // Generic error
 	}
 
-	return updateUser, nil
+	return updatedUser, nil
 }
 
 // RegisterNewUser registering new user to the database, returning the current user if success
