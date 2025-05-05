@@ -299,7 +299,7 @@ func (controller *OrderController) getOrderHandler(writer http.ResponseWriter, r
 	// 2. then we can get the order [x]
 	// 3. Hmm kayaknya butuh authorisasi user_pictures, jika user_pictures berbeda dengan order user_pictures id maka batalkan
 
-	orderDTOResponse, err := controller.orderService.GetOrderById(request.Context(), requestData.Data.Order)
+	orderDTOResponse, _ := controller.orderService.GetOrderById(request.Context(), requestData.Data.Order)
 
 	if int(orderDTOResponse.Order.UserId) != userId {
 		writer.WriteHeader(http.StatusUnauthorized)
